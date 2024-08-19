@@ -1,0 +1,88 @@
+@font-face {
+    font-family: 'itc-garamond-std';
+    src: url('/Users/joebacchus/Library/Fonts/itc-garamond-std-light-narrow.otf');
+}
+
+@font-face {
+    font-family: 'tt-firs-neue';
+    src: url('/Users/joebacchus/Library/Fonts/TT Firs Neue Trial Regular.ttf');
+}
+
+
+body {
+    background-color: rgb(210, 210, 210);
+    color: rgb(26, 26, 26);
+    font-family: Arial, Helvetica, sans-serif;
+    padding: 100px;
+    margin: 0:
+}
+
+::selection {
+    color: rgb(255, 70, 18);
+    background: rgba(246, 92, 40, 0);
+  }
+
+.container {
+    display: grid;
+    grid-template-rows: 100px;
+    grid-template-columns: 45% 45%;
+    gap: 10%;
+    min-height: 50vh;
+    padding: 200px;
+}
+
+.sidebar {
+    position: fixed;
+    right: 0;
+    top: 0;
+    width: 100px;
+    height: 100%;
+    background-color: rgb(26, 26, 26);
+    color: white;
+    padding: 20px;
+}
+
+h1 {
+    color: rgb(26, 26, 26);
+    font-family: "itc-garamond-std";
+    font-size: 100px;
+}
+
+h2 {
+    color: rgb(26, 26, 26);
+    font-family: "itc-garamond-std";
+    font-size: 50px;
+    margin-top:-80px;
+}
+
+h3 {
+    color: rgb(26, 26, 26);
+    font-family: "itc-garamond-std";
+    font-size: 50px;
+}
+
+p {
+    color: rgb(26, 26, 26);
+    font-family: "tt-firs-neue";
+    font-size: 18px;
+    margin-top:-40px;
+}
+
+.hidden {
+    opacity: 0;
+    filter: blur(2px);
+    transform: translateX(-5%);
+    transition: all 1s;
+}
+
+.show {
+    opacity: 1;
+    filter: blur(0);
+    transform: translateX(0);
+}
+
+@media(prefers-reduced-motion) {
+    .hidden {
+        transition: none;
+    }
+}
