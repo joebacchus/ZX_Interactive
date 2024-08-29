@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Starting</title>
+    <link rel="stylesheet" href="sandboxDemo.css">
+<!-- Load the Paper.js library -->
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/paper.js/0.12.15/paper-full.min.js"></script>
+<!-- Define inlined PaperScript associate it with myCanvas -->
+<script type="text/paperscript" canvas="myCanvas">
+    // Create a Paper.js Path to draw a line into it:
+    var path = new Path();
+    // Give the stroke a color
+    path.strokeColor = 'black';
+    var start = new Point(100, 100);
+    // Move to start and draw a line from there
+    path.moveTo(start);
+    // Note the plus operator on Point objects.
+    // PaperScript does that for us, and much more!
+    path.lineTo(start + [ 100, -50 ]);
+    
+    // Create a circle shaped path with its center at the center
+    // of the view and a radius of 30:
+    var path = new Path.Circle({
+        center: view.center,
+        radius: 2,
+        strokeColor: 'black'
+    });
+
+    function onResize(event) {
+        // Whenever the window is resized, recenter the objct:
+        path.position = view.center;
+    }
+    
+    var topLeft = new Point(400, 50);
+    var rectSize = new Size(700, 600);
+    var rect = new Path.Rectangle(topLeft, rectSize);
+    rect.strokeColor = 'black';
+    rect.smooth({ type: 'geometric', factor: 0.05 });
+    rect.fillColor = 'white';
+    console.log(rect); // { x: 10, y: 20, width: 200, height: 100 }
+    console.log(rect.point); // { x: 10, y: 20 }
+    console.log(rect.size); // { width: 200, height: 100 }
+    
+    ///////////////////////////////////////////
+    var Zbody = new Path.Circle(new Point(120, 50), 10);
+    Zbody.style = {
+        fillColor: '#def7db',
+        strokeColor: 'black',
+        strokeWidth: 2,
+    };
+    var Zspider = new Symbol(Zbody); // make symbol
+    //var Zspider.item.name = Zspi;
+    
+    var Xbody = new Path.Circle(new Point(120, 100), 10);
+    Xbody.style = {
+        fillColor: '#dea8a6',
+        strokeColor: 'black',
+        strokeWidth: 2,
+    };
+    // var Xspider = new Symbol(Xbody); // make symbol
+    ////////////
+    var clickp = view.center + [-250,-100]
+    Zspider.place(clickp);
+    // make toolbox
+    var clickrect = new Path.Rectangle({
+                point: [clickp.x -15, clickp.y -15], // Top-left corner
+                size: [30, 30], // Width and height
+                strokeColor: 'black', // Black border
+                strokeWidth: 2, // Border width
+                fillColor: new Color('#f5f5f5') // Completely transparent fill
+            });
+    clickrect.fillColor.alpha = 0.1;
+    
+    // Adding text to the canvas
+    var text = new paper.PointText({
+        point: clickp + [-40, -30],  // Center of the canvas
+        content: 'toolkit:',
+        fillColor: 'black',
+        fontFamily: 'Arial',
+        fontWeight: 'normal',
+        fontSize: 20
+    });
+    
+    
+    var zspiderInstance = null;
+    var isFollowing = false;
+    
+    // Change cursor to hand when hovering over the rectangle
+    clickrect.onMouseEnter = function(event) {
+        document.getElementById('myCanvas').style.cursor = 'pointer';
+    };
+
+    // Revert cursor when not hovering
+    clickrect.onMouseLeave = function(event) {
+        document.getElementById('myCanvas').style.cursor = 'default';
+    };
+
+    // Attach a click event listener to the rectangle
+    clickrect.onClick = function(event) {
+        // Action to take when the rectangle is clicked
+        //alert("Rectangle clicked!");
+        isFollowing = true;
+         if (!zspiderInstance) {
+             zspiderInstance = Zspider.place(event.point);
+         }
+    };
+    // Update the position of Zspider as the mouse moves
+    view.onMouseMove = function(event) {
+        if (isFollowing && zspiderInstance) {
+            zspiderInstance.position = event.point;
+        }
+    };
+    // Place a Zspider in the box at the mouse position when clicked
+    view.onClick = function(event) {
+        if (rect.bounds.contains(event.point) && isFollowing) {
+            // Place the Zspider permanently at the current mouse position
+            Zspider.place(event.point);
+            // Stop following the mouse after placing
+            isFollowing = false;
+            zspiderInstance.remove(); // Remove the temporary instance
+            zspiderInstance = null;
+        }
+    };
+    // Drag spiders about
+    view.onMouseDown = function(event) {
+        var hitResult = project.hitTest(event.point);
+        console.log(hitResult.item.className)
+        if (hitResult && hitResult.item && hitResult.item.className == 'SymbolItem')  {
+            // Item clicked is a spider
+            var draggedItem = hitResult.item;
+            var offset = event.point.subtract(draggedItem.position);
+
+            // Move the spider while the mouse is dragged
+            view.onMouseDrag = function(event) {
+                draggedItem.position = event.point.subtract(offset);
+            };
+        }
+    };
+</script>
+</head>
+<body>
+    
+    <canvas id="myCanvas" resize></canvas>
+    
+</body>
+</html>
+
