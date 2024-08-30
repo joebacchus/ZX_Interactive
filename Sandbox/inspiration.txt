@@ -1,0 +1,5 @@
+Metaballs for fusing animation:
+following website inspo explains method using JavaScript: "https://jurasic.dev/marching_squares/"
+
+Sandbox layout:
+Website uses Paper.js to make a paint style canvas with toolbox on the side: "http://thepaintshop.biz"
