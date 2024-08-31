@@ -34,7 +34,7 @@ var textLayer = new Layer(); // Layer for the plus symbols
 // Initial circles
 var Z_spi_init = new Path.Circle({
     center: [centerX - 0, centerY - 0], // Adjust initial position as needed
-    radius: 10,
+    radius: 8,
     strokeColor: black_color, 
     strokeWidth: 2,       
     fillColor: green_color,
@@ -43,7 +43,7 @@ var Z_spi_init = new Path.Circle({
 
 var X_spi_init = new Path.Circle({
     center: [centerX - 0, centerY + 0], // Adjust initial position as needed
-    radius: 10,
+    radius: 8,
     strokeColor: black_color, 
     strokeWidth: 2,       
     fillColor: red_color,
@@ -129,7 +129,7 @@ function onMouseDown(event) {
     if (Z_spi_init.contains(event.point)) {
         active_spi = new Path.Circle({
             center: snapToGrid(event.point),
-            radius: 10,
+            radius: 8,
             strokeColor: black_color, 
             strokeWidth: 2,       
             fillColor: green_color,
@@ -143,7 +143,7 @@ function onMouseDown(event) {
     else if (X_spi_init.contains(event.point)) {
         active_spi = new Path.Circle({
             center: snapToGrid(event.point),
-            radius: 10,
+            radius: 8,
             strokeColor: black_color, 
             strokeWidth: 2,       
             fillColor: red_color,
