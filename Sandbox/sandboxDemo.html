@@ -7,135 +7,230 @@
 <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/paper.js/0.12.15/paper-full.min.js"></script>
 <!-- Define inlined PaperScript associate it with myCanvas -->
 <script type="text/paperscript" canvas="myCanvas">
-    // Create a Paper.js Path to draw a line into it:
-    var path = new Path();
-    // Give the stroke a color
-    path.strokeColor = 'black';
-    var start = new Point(100, 100);
-    // Move to start and draw a line from there
-    path.moveTo(start);
-    // Note the plus operator on Point objects.
-    // PaperScript does that for us, and much more!
-    path.lineTo(start + [ 100, -50 ]);
-    
-    // Create a circle shaped path with its center at the center
-    // of the view and a radius of 30:
-    var path = new Path.Circle({
-        center: view.center,
-        radius: 2,
-        strokeColor: 'black'
-    });
+// Colors
+var red_color = "#ff3657";
+var green_color = "#8dff36";
+var black_color = "#242424";
+var black_color_h = "#575757";
+var grid_dot_color = "#000000"; // Color for grid dots
 
-    function onResize(event) {
-        // Whenever the window is resized, recenter the objct:
-        path.position = view.center;
-    }
+// Grid size
+var gridSize = 20; // Change this value to adjust the grid cell size
+var gridDotRadius = 1; // Radius of the grid dots
+
+// Grid dimensions (fixed size)
+var gridWidth = 500; // Width of the grid
+var gridHeight = 500; // Height of the grid
+
+// Calculate center position
+var centerX = view.size.width / 2;
+var centerY = view.size.height / 2;
+
+// Create layers
+var backgroundLayer = new Layer(); // Layer for grid dots
+var foregroundLayer = new Layer(); // Default layer for other elements
+var textLayer = new Layer(); // Layer for the plus symbols
+
+// Initial circles
+var Z_spi_init = new Path.Circle({
+    center: [centerX - 0, centerY - 0], // Adjust initial position as needed
+    radius: 8,
+    strokeColor: black_color,
+    strokeWidth: 2,
+    fillColor: green_color,
+    parent: foregroundLayer // Add to the foreground layer
+});
+
+var X_spi_init = new Path.Circle({
+    center: [centerX - 0, centerY + 0], // Adjust initial position as needed
+    radius: 8,
+    strokeColor: black_color,
+    strokeWidth: 2,
+    fillColor: red_color,
+    parent: foregroundLayer // Add to the foreground layer
+});
+
+// Plus symbols
+var Z_spi_plus = new PointText({
+    point: Z_spi_init.position,
+    content: '+',
+    fillColor: black_color,
+    fontSize: 15,
+    fontFamily: 'Arial',
+    parent: textLayer // Add to the text layer
+});
+Z_spi_plus.visible = false; // Initially hidden
+
+var X_spi_plus = new PointText({
+    point: X_spi_init.position,
+    content: '+',
+    fillColor: black_color,
+    fontSize: 15,
+    fontFamily: 'Arial',
+    parent: textLayer // Add to the text layer
+});
+X_spi_plus.visible = false; // Initially hidden
+
+var spiders = [];
+var active_spi = null;
+var Z_spi_selected = false;
+var X_spi_selected = false;
+
+// Create grid dots
+function createGridDots() {
+    backgroundLayer.removeChildren(); // Clear existing grid dots
     
-    var topLeft = new Point(400, 50);
-    var rectSize = new Size(700, 600);
-    var rect = new Path.Rectangle(topLeft, rectSize);
-    rect.strokeColor = 'black';
-    rect.smooth({ type: 'geometric', factor: 0.05 });
-    rect.fillColor = 'white';
-    console.log(rect); // { x: 10, y: 20, width: 200, height: 100 }
-    console.log(rect.point); // { x: 10, y: 20 }
-    console.log(rect.size); // { width: 200, height: 100 }
-    
-    ///////////////////////////////////////////
-    var Zbody = new Path.Circle(new Point(120, 50), 10);
-    Zbody.style = {
-        fillColor: '#def7db',
-        strokeColor: 'black',
-        strokeWidth: 2,
-    };
-    var Zspider = new Symbol(Zbody); // make symbol
-    //var Zspider.item.name = Zspi;
-    
-    var Xbody = new Path.Circle(new Point(120, 100), 10);
-    Xbody.style = {
-        fillColor: '#dea8a6',
-        strokeColor: 'black',
-        strokeWidth: 2,
-    };
-    // var Xspider = new Symbol(Xbody); // make symbol
-    ////////////
-    var clickp = view.center + [-250,-100]
-    Zspider.place(clickp);
-    // make toolbox
-    var clickrect = new Path.Rectangle({
-                point: [clickp.x -15, clickp.y -15], // Top-left corner
-                size: [30, 30], // Width and height
-                strokeColor: 'black', // Black border
-                strokeWidth: 2, // Border width
-                fillColor: new Color('#f5f5f5') // Completely transparent fill
+    var startX = centerX - gridWidth / 2;
+    var startY = centerY - gridHeight / 2;
+
+    for (var x = startX; x < startX + gridWidth; x += gridSize) {
+        for (var y = startY; y < startY + gridHeight; y += gridSize) {
+            new Path.Circle({
+                center: [x, y],
+                radius: gridDotRadius,
+                fillColor: grid_dot_color,
+                parent: backgroundLayer // Add to the background layer
             });
-    clickrect.fillColor.alpha = 0.1;
-    
-    // Adding text to the canvas
-    var text = new paper.PointText({
-        point: clickp + [-40, -30],  // Center of the canvas
-        content: 'toolkit:',
-        fillColor: 'black',
-        fontFamily: 'Arial',
-        fontWeight: 'normal',
-        fontSize: 20
-    });
-    
-    
-    var zspiderInstance = null;
-    var isFollowing = false;
-    
-    // Change cursor to hand when hovering over the rectangle
-    clickrect.onMouseEnter = function(event) {
-        document.getElementById('myCanvas').style.cursor = 'pointer';
-    };
-
-    // Revert cursor when not hovering
-    clickrect.onMouseLeave = function(event) {
-        document.getElementById('myCanvas').style.cursor = 'default';
-    };
-
-    // Attach a click event listener to the rectangle
-    clickrect.onClick = function(event) {
-        // Action to take when the rectangle is clicked
-        //alert("Rectangle clicked!");
-        isFollowing = true;
-         if (!zspiderInstance) {
-             zspiderInstance = Zspider.place(event.point);
-         }
-    };
-    // Update the position of Zspider as the mouse moves
-    view.onMouseMove = function(event) {
-        if (isFollowing && zspiderInstance) {
-            zspiderInstance.position = event.point;
         }
-    };
-    // Place a Zspider in the box at the mouse position when clicked
-    view.onClick = function(event) {
-        if (rect.bounds.contains(event.point) && isFollowing) {
-            // Place the Zspider permanently at the current mouse position
-            Zspider.place(event.point);
-            // Stop following the mouse after placing
-            isFollowing = false;
-            zspiderInstance.remove(); // Remove the temporary instance
-            zspiderInstance = null;
-        }
-    };
-    // Drag spiders about
-    view.onMouseDown = function(event) {
-        var hitResult = project.hitTest(event.point);
-        console.log(hitResult.item.className)
-        if (hitResult && hitResult.item && hitResult.item.className == 'SymbolItem')  {
-            // Item clicked is a spider
-            var draggedItem = hitResult.item;
-            var offset = event.point.subtract(draggedItem.position);
+    }
+}
 
-            // Move the spider while the mouse is dragged
-            view.onMouseDrag = function(event) {
-                draggedItem.position = event.point.subtract(offset);
-            };
+function onResize(event) {
+
+    // Center initial spiders
+    Z_spi_init.position = [centerX - 290, centerY - 30];
+    X_spi_init.position = [centerX - 290, centerY + 10];
+    
+    // Update plus symbols position
+    Z_spi_plus.position = Z_spi_init.position;
+    X_spi_plus.position = X_spi_init.position;
+    
+
+    // Recreate grid dots
+    createGridDots();
+}
+
+function onMouseDown(event) {
+    // Check if any existing circle is clicked
+    for (var i = 0; i < spiders.length; i++) {
+        var circle = spiders[i];
+        if (circle.contains(event.point)) {
+            // Start dragging the clicked circle
+            active_spi = circle;
+            active_spi.dragging = true;
+            active_spi.lastPoint = event.point; // Store the last point
+            return;
         }
-    };
+    }
+
+    // If the green initial circle is clicked, create a new circle
+    if (Z_spi_init.contains(event.point)) {
+        active_spi = new Path.Circle({
+            center: snapToGrid(event.point),
+            radius: 8,
+            strokeColor: black_color,
+            strokeWidth: 2,
+            fillColor: green_color,
+            parent: foregroundLayer // Add to the foreground layer
+        });
+        spiders.push(active_spi); // Add the new circle to the array
+        active_spi.dragging = true;
+    }
+
+    // If the red initial circle is clicked, create a new circle
+    else if (X_spi_init.contains(event.point)) {
+        active_spi = new Path.Circle({
+            center: snapToGrid(event.point),
+            radius: 8,
+            strokeColor: black_color,
+            strokeWidth: 2,
+            fillColor: red_color,
+            parent: foregroundLayer // Add to the foreground layer
+        });
+        spiders.push(active_spi); // Add the new circle to the array
+        active_spi.dragging = true;
+    }
+    else {
+        // If clicking elsewhere and there's an active circle, stop dragging
+        if (active_spi) {
+            active_spi.dragging = false;
+            active_spi = null;
+        }
+    }
+}
+
+function onMouseDrag(event) {
+    // If an active circle is being dragged, move it to the snapped cursor position
+    if (active_spi && active_spi.dragging) {
+        // Snap the cursor position to the grid
+        var snappedPoint = snapToGrid(event.point);
+        active_spi.position = snappedPoint;
+    }
+}
+
+function onMouseUp(event) {
+    // Stop dragging when the mouse button is released
+    if (active_spi) {
+        active_spi.dragging = false;
+        active_spi = null;
+    }
+}
+
+function onMouseMove(event) {
+    // Check if the mouse is over the green initial circle
+    if (Z_spi_init.contains(event.point)) {
+        if (!Z_spi_selected) {
+            Z_spi_init.strokeColor = black_color_h;
+            Z_spi_init.strokeWidth = 3;
+            Z_spi_plus.visible = true; // Show the plus symbol
+            Z_spi_selected = true;
+        }
+    } else {
+        if (Z_spi_selected) {
+            Z_spi_init.strokeColor = black_color;
+            Z_spi_init.strokeWidth = 2;
+            Z_spi_plus.visible = false; // Hide the plus symbol
+            Z_spi_selected = false;
+        }
+    }
+
+    // Check if the mouse is over the red initial circle
+    if (X_spi_init.contains(event.point)) {
+        if (!X_spi_selected) {
+            X_spi_init.strokeColor = black_color_h;
+            X_spi_init.strokeWidth = 3;
+            X_spi_plus.visible = true; // Show the plus symbol
+            X_spi_selected = true;
+        }
+    } else {
+        if (X_spi_selected) {
+            X_spi_init.strokeColor = black_color;
+            X_spi_init.strokeWidth = 2;
+            X_spi_plus.visible = false; // Hide the plus symbol
+            X_spi_selected = false;
+        }
+    }
+}
+
+// Function to snap a point to the nearest grid intersection
+function snapToGrid(point) {
+    return new Point(
+        Math.round(point.x / gridSize) * gridSize - 10,
+        Math.round(point.y / gridSize) * gridSize - 8
+    );
+}
+
+// Setup event listeners
+view.on('mousedown', onMouseDown);
+view.on('mousemove', onMouseMove);
+view.on('mousedrag', onMouseDrag);
+view.on('mouseup', onMouseUp);
+
+// Initial setup
+createGridDots();
+
+
+
 </script>
 </head>
 <body>
@@ -144,4 +239,3 @@
     
 </body>
 </html>
-
