@@ -72,6 +72,7 @@ var X_spi_plus = new PointText({
 X_spi_plus.visible = false; // Initially hidden
 
 var spiders = [];
+var spi_cen_pos = []; // position from centre for resizing
 var active_spi = null;
 var Z_spi_selected = false;
 var X_spi_selected = false;
@@ -96,6 +97,9 @@ function createGridDots() {
 }
 
 function onResize(event) {
+    // Recalculate center position
+    centerX = view.size.width / 2;
+    centerY = view.size.height / 2;
 
     // Center initial spiders
     Z_spi_init.position = [centerX - 290, centerY - 30];
@@ -105,9 +109,15 @@ function onResize(event) {
     Z_spi_plus.position = Z_spi_init.position;
     X_spi_plus.position = X_spi_init.position;
     
-
     // Recreate grid dots
     createGridDots();
+    
+    // centre placed spiders
+    for (var i = 0; i < spi_cen_pos.length; i++) {
+        // var pos_ = spi_cen_pos[i];
+        console.log(spi_cen_pos[i])
+        spiders[i].position = spi_cen_pos[i] + view.center
+        }
 }
 
 function onMouseDown(event) {
@@ -134,6 +144,7 @@ function onMouseDown(event) {
             parent: foregroundLayer // Add to the foreground layer
         });
         spiders.push(active_spi); // Add the new circle to the array
+        spi_cen_pos.push(active_spi.position - view.center)
         active_spi.dragging = true;
     }
 
@@ -148,6 +159,7 @@ function onMouseDown(event) {
             parent: foregroundLayer // Add to the foreground layer
         });
         spiders.push(active_spi); // Add the new circle to the array
+        spi_cen_pos.push(active_spi.position - view.center)
         active_spi.dragging = true;
     }
     else {
@@ -165,6 +177,10 @@ function onMouseDrag(event) {
         // Snap the cursor position to the grid
         var snappedPoint = snapToGrid(event.point);
         active_spi.position = snappedPoint;
+        for (var i = 0; i < spi_cen_pos.length; i++) {
+            spi_cen_pos[i] = spiders[i].position - view.center // update centred
+        
+        }
     }
 }
 
@@ -215,8 +231,8 @@ function onMouseMove(event) {
 // Function to snap a point to the nearest grid intersection
 function snapToGrid(point) {
     return new Point(
-        Math.round(point.x / gridSize) * gridSize - 10,
-        Math.round(point.y / gridSize) * gridSize - 8
+        Math.round(point.x / gridSize) * gridSize ,
+        Math.round(point.y / gridSize) * gridSize 
     );
 }
 
