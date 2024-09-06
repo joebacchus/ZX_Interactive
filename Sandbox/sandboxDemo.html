@@ -118,13 +118,15 @@ spline.guide = true; // Make it a non-interactive guide path (optional)
 spline.ignoreEvents = true; // Disable hit testing for this path
 
 var spiders = [];
-var strings = [];
+var splines_points = [];
 var spi_cen_pos = []; // position from centre for resizing
 var active_spi = null;
 var activePath = null;
 var Z_spi_selected = false;
 var X_spi_selected = false;
 var drawingActive = false;
+var strings = [];
+var draggingPoint = null; // for string points
 
 // Create grid dots
 function createGridDots() {
@@ -165,12 +167,10 @@ function onResize(event) {
     
     // centre placed spiders
     for (var i = 0; i < spi_cen_pos.length; i++) {
-        // var pos_ = spi_cen_pos[i];
-        console.log(spi_cen_pos[i])
         spiders[i].position = spi_cen_pos[i] + view.center
         }
 }
-
+var spl_index = null; pt=index = null;
 function onMouseDown(event) {
     // Check if any existing circle is clicked
     for (var i = 0; i < spiders.length; i++) {
@@ -181,6 +181,21 @@ function onMouseDown(event) {
             active_spi.dragging = true;
             active_spi.lastPoint = event.point; // Store the last point
             return;
+        }
+    }
+    // Check if the user clicked on any of the point circles
+    //console.log(splines_points.length);
+    for (var i = 0; i < splines_points.length; i++) {
+        //console.log(spl_points)
+        //console.log("Spline ${i + 1}:");
+        for (var j = 0; j < splines_points[i].length; j++) {
+            //console.log(j);
+            if (splines_points[i][j].hitTest(event.point)) {
+                draggingPoint = splines_points[i][j]; // Set the point that is being dragged-->
+                spl_index = i;
+                pt_index = j;
+                break;
+            }
         }
     }
 
@@ -233,6 +248,12 @@ function onMouseDrag(event) {
         
         }
     }
+    if (draggingPoint) {
+        // Move the point being dragged
+        draggingPoint.position = snapToGrid(event.point);
+        strings[spl_index].segments[pt_index].point = draggingPoint.position;
+        
+    }
 }
 
 view.onClick = function(event) {
@@ -241,17 +262,41 @@ view.onClick = function(event) {
         // Create a new path and add the initial point, snapped to the grid
         activePath = new Path({
             strokeColor: black_color,
-            strokeWidth: 1
+            strokeWidth: 2
         });
         activePath.add(snapToGrid(event.point+[10,10]));
     } else if (drawingActive && activePath) { // If drawing is active, add the final point, snapped to the grid, and stop drawing
         activePath.add(snapToGrid(event.point+[10,10]));
-        activePath.simplify();
-        activePath.smooth(); // Smooth to create a spline effect
-        strings.push(activePath)
+        // simplifying the spline
+        var splinePath = new Path({
+            strokeColor: black_color,
+            strokeWidth: 2
+        });
+        var k = 0.01;
+        var N = Math.floor(k * activePath.length); // Number of points on final spline
+        var spl_points = [];
+        for (var i = 0; i <= N; i++) {
+            var offset = (i / N) * activePath.length; // offset along the path
+            var point = activePath.getPointAt(offset); // point at offset
+            var snapd_point = snapToGrid(point) // snap spline points to grid
+            splinePath.add(snapd_point);
+            // Create a circle at the point to make it visible and interactive
+            var pointCircle = new Path.Circle({
+                center: snapd_point,
+                radius: 3,
+                fillColor: 'white',
+                strokeColor: black_color,
+                strokeWidth: 3
+            });
+            spl_points.push(pointCircle); // Store
+        }
+        activePath.remove(); activePath = null;
+        splinePath.smooth();
+        splines_points.push(spl_points);
+        strings.push(splinePath);
         drawingActive = false;
-        activePath = null;
         document.getElementById('myCanvas').style.cursor = 'default';
+        //console.log(splines_points);
     }
 }
     
@@ -261,6 +306,9 @@ function onMouseUp(event) {
     if (active_spi) {
         active_spi.dragging = false;
         active_spi = null;
+    }
+    if (draggingPoint) {
+        draggingPoint = null;
     }
 }
 
