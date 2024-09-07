@@ -56,23 +56,14 @@ var string_rect = new Path.Rectangle({
     strokeColor: black_color, // Black border
     strokeWidth: 1, // Border width
     fillColor: 'white', // Completely transparent fill
-    parent: foregroundLayer,
         });
 string_rect.smooth({ type: 'geometric', factor: 0.05 });
-// Change cursor to hand when hovering over the rectangle
+// dynamic string icon
 string_rect.onMouseEnter = function(event) {
-    document.getElementById('myCanvas').style.cursor = 'pointer';
     spline.visible = true;
 };
-// Revert cursor when not hovering
 string_rect.onMouseLeave = function(event) {
-    if (drawingActive) {
-        document.getElementById('myCanvas').style.cursor = 'crosshair';
-    } else {
-        document.getElementById('myCanvas').style.cursor = 'default';
-    }
     spline.visible = false;
-
 };
     
 string_rect.onClick = function(event) {
@@ -207,7 +198,6 @@ function onMouseDown(event) {
             strokeColor: black_color,
             strokeWidth: 2,
             fillColor: green_color,
-            parent: foregroundLayer // Add to the foreground layer
         });
         spiders.push(active_spi); // Add the new circle to the array
         spi_cen_pos.push(active_spi.position - view.center)
@@ -222,7 +212,6 @@ function onMouseDown(event) {
             strokeColor: black_color,
             strokeWidth: 2,
             fillColor: red_color,
-            parent: foregroundLayer // Add to the foreground layer
         });
         spiders.push(active_spi); // Add the new circle to the array
         spi_cen_pos.push(active_spi.position - view.center)
@@ -255,7 +244,7 @@ function onMouseDrag(event) {
         
     }
 }
-
+// drawing function
 view.onClick = function(event) {
     var hitResult = project.hitTest(event.point); // ensure pen does not activate ontop of another object
     if (drawingActive && !activePath && !hitResult) {
@@ -288,10 +277,11 @@ view.onClick = function(event) {
                 strokeColor: black_color,
                 strokeWidth: 3
             });
+            pointCircle.sendToBack();
             spl_points.push(pointCircle); // Store
         }
         activePath.remove(); activePath = null;
-        splinePath.smooth();
+        splinePath.sendToBack(); splinePath.smooth(); // strings below spiders
         splines_points.push(spl_points);
         strings.push(splinePath);
         drawingActive = false;
@@ -355,26 +345,31 @@ function onMouseMove(event) {
     for (var i = 0; i < splines_points.length; i++) {
         for (var j = 0; j < splines_points[i].length; j++) {
             var distance = event.point.getDistance(splines_points[i][j].position);
-            if (distance <= 10 || strings[i].hitTest(event.point)) {
+            if (distance <= 6 || strings[i].hitTest(event.point)) {
                 for (var k = 0; k < splines_points[i].length; k++) {
                      splines_points[i][k].visible = true;
                 }
-                document.getElementById('myCanvas').style.cursor = 'pointer';
                 detect = true;
                 break;
 
-            } else {}
-            
-            if (distance > 10 && !strings[i].hitTest(event.point) && detect) {
+            } else {
                 for (var k = 0; k < splines_points[i].length; k++) {
                      splines_points[i][k].visible = false;
                 }
-                document.getElementById('myCanvas').style.cursor = 'default';
-                detect= false;
-                break;
-            } else {}
-            //console.log(strings[i].hitTest(event.point))
+            }
             
+        }
+    }
+    // mouse to hand
+    var hitResult = project.activeLayer.hitTest(event.point);
+    if (hitResult) {
+        // If the mouse is over an object, change the cursor to a hand (pointer)
+        document.getElementById('myCanvas').style.cursor = 'pointer';
+    } else {
+        if (drawingActive) {
+            document.getElementById('myCanvas').style.cursor = 'crosshair';
+        } else {
+            document.getElementById('myCanvas').style.cursor = 'default';
         }
     }
 }
