@@ -250,7 +250,7 @@ function onMouseDrag(event) {
     }
     if (draggingPoint) {
         // Move the point being dragged
-        draggingPoint.position = snapToGrid(event.point);
+        draggingPoint.position = snapToGrid(event.point + [10,10]);
         strings[spl_index].segments[pt_index].point = draggingPoint.position;
         
     }
@@ -267,20 +267,20 @@ view.onClick = function(event) {
         activePath.add(snapToGrid(event.point+[10,10]));
     } else if (drawingActive && activePath) { // If drawing is active, add the final point, snapped to the grid, and stop drawing
         activePath.add(snapToGrid(event.point+[10,10]));
-        // simplifying the spline
+        // simplifying the string by replacing with an N point spline
         var splinePath = new Path({
             strokeColor: black_color,
             strokeWidth: 2
         });
-        var k = 0.01;
-        var N = Math.floor(k * activePath.length); // Number of points on final spline
-        var spl_points = [];
+        var k = 0.01; // node density
+        var N = Math.floor(k * activePath.length); // Number of nodes on final spline
+        var spl_points = []; // to temporarily save spline nodes
         for (var i = 0; i <= N; i++) {
             var offset = (i / N) * activePath.length; // offset along the path
             var point = activePath.getPointAt(offset); // point at offset
             var snapd_point = snapToGrid(point) // snap spline points to grid
             splinePath.add(snapd_point);
-            // Create a circle at the point to make it visible and interactive
+            // Create a circle at each node / point
             var pointCircle = new Path.Circle({
                 center: snapd_point,
                 radius: 3,
@@ -296,7 +296,6 @@ view.onClick = function(event) {
         strings.push(splinePath);
         drawingActive = false;
         document.getElementById('myCanvas').style.cursor = 'default';
-        //console.log(splines_points);
     }
 }
     
@@ -308,10 +307,11 @@ function onMouseUp(event) {
         active_spi = null;
     }
     if (draggingPoint) {
-        draggingPoint = null;
+        draggingPoint = null; // stop dragging string
     }
 }
 
+var detect = false; // switch for turning on and off spline node proximity detection
 function onMouseMove(event) {
     // Check if the mouse is over the green initial circle
     if (Z_spi_init.contains(event.point)) {
@@ -346,8 +346,36 @@ function onMouseMove(event) {
             X_spi_selected = false;
         }
     }
+    // for creating strings
     if (drawingActive && activePath) {
         activePath.add(event.point);
+    }
+    
+    // showing the spline points when mouse is ontop of strings
+    for (var i = 0; i < splines_points.length; i++) {
+        for (var j = 0; j < splines_points[i].length; j++) {
+            var distance = event.point.getDistance(splines_points[i][j].position);
+            if (distance <= 10 || strings[i].hitTest(event.point)) {
+                for (var k = 0; k < splines_points[i].length; k++) {
+                     splines_points[i][k].visible = true;
+                }
+                document.getElementById('myCanvas').style.cursor = 'pointer';
+                detect = true;
+                break;
+
+            } else {}
+            
+            if (distance > 10 && !strings[i].hitTest(event.point) && detect) {
+                for (var k = 0; k < splines_points[i].length; k++) {
+                     splines_points[i][k].visible = false;
+                }
+                document.getElementById('myCanvas').style.cursor = 'default';
+                detect= false;
+                break;
+            } else {}
+            //console.log(strings[i].hitTest(event.point))
+            
+        }
     }
 }
 
