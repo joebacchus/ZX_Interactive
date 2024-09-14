@@ -49,6 +49,26 @@ var X_spi_init = new Path.Circle({
     fillColor: red_color,
     parent: foregroundLayer // Add to the foreground layer
 });
+// Cable box
+var string_rect = new Path.Rectangle({
+    point: [centerX - 290, centerY + 50], // Top-left corner
+    size: [25, 25], // Width and height
+    strokeColor: black_color, // Black border
+    strokeWidth: 1, // Border width
+    fillColor: 'white', // Completely transparent fill
+        });
+string_rect.smooth({ type: 'geometric', factor: 0.05 });
+// dynamic string icon
+string_rect.onMouseEnter = function(event) {
+    spline.visible = true;
+};
+string_rect.onMouseLeave = function(event) {
+    spline.visible = false;
+};
+    
+string_rect.onClick = function(event) {
+    drawingActive = !drawingActive
+}
 
 // Plus symbols
 var Z_spi_plus = new PointText({
@@ -71,11 +91,33 @@ var X_spi_plus = new PointText({
 });
 X_spi_plus.visible = false; // Initially hidden
 
+// Create string icon
+var spline = new Path({
+    strokeColor: 'black',
+    strokeWidth: 1,
+    parent: textLayer
+});
+// 4 points to the path
+spline.add(new Point(string_rect.position.x - 20, string_rect.position.y - 20));
+spline.add(new Point(string_rect.position.x - 10, string_rect.position.y - 17));
+spline.add(new Point(string_rect.position.x - 15, string_rect.position.y - 11));
+spline.add(new Point(string_rect.position.x - 5, string_rect.position.y - 5));
+spline.smooth();
+spline.visible = false;
+spline.fullySelected = false; // Prevent it from being selected
+spline.guide = true; // Make it a non-interactive guide path (optional)
+spline.ignoreEvents = true; // Disable hit testing for this path
+
 var spiders = [];
+var splines_points = [];
 var spi_cen_pos = []; // position from centre for resizing
 var active_spi = null;
+var activePath = null;
 var Z_spi_selected = false;
 var X_spi_selected = false;
+var drawingActive = false;
+var strings = [];
+var draggingPoint = null; // for string points
 
 // Create grid dots
 function createGridDots() {
@@ -104,6 +146,8 @@ function onResize(event) {
     // Center initial spiders
     Z_spi_init.position = [centerX - 290, centerY - 30];
     X_spi_init.position = [centerX - 290, centerY + 10];
+    string_rect.position = [centerX - 290, centerY + 50];
+    spline.position = [centerX - 290, centerY + 50];
     
     // Update plus symbols position
     Z_spi_plus.position = Z_spi_init.position;
@@ -114,12 +158,10 @@ function onResize(event) {
     
     // centre placed spiders
     for (var i = 0; i < spi_cen_pos.length; i++) {
-        // var pos_ = spi_cen_pos[i];
-        console.log(spi_cen_pos[i])
         spiders[i].position = spi_cen_pos[i] + view.center
         }
 }
-
+var spl_index = null; pt=index = null;
 function onMouseDown(event) {
     // Check if any existing circle is clicked
     for (var i = 0; i < spiders.length; i++) {
@@ -132,6 +174,21 @@ function onMouseDown(event) {
             return;
         }
     }
+    // Check if the user clicked on any of the point circles
+    //console.log(splines_points.length);
+    for (var i = 0; i < splines_points.length; i++) {
+        //console.log(spl_points)
+        //console.log("Spline ${i + 1}:");
+        for (var j = 0; j < splines_points[i].length; j++) {
+            //console.log(j);
+            if (splines_points[i][j].hitTest(event.point)) {
+                draggingPoint = splines_points[i][j]; // Set the point that is being dragged-->
+                spl_index = i;
+                pt_index = j;
+                break;
+            }
+        }
+    }
 
     // If the green initial circle is clicked, create a new circle
     if (Z_spi_init.contains(event.point)) {
@@ -141,7 +198,6 @@ function onMouseDown(event) {
             strokeColor: black_color,
             strokeWidth: 2,
             fillColor: green_color,
-            parent: foregroundLayer // Add to the foreground layer
         });
         spiders.push(active_spi); // Add the new circle to the array
         spi_cen_pos.push(active_spi.position - view.center)
@@ -156,7 +212,6 @@ function onMouseDown(event) {
             strokeColor: black_color,
             strokeWidth: 2,
             fillColor: red_color,
-            parent: foregroundLayer // Add to the foreground layer
         });
         spiders.push(active_spi); // Add the new circle to the array
         spi_cen_pos.push(active_spi.position - view.center)
@@ -182,7 +237,58 @@ function onMouseDrag(event) {
         
         }
     }
+    if (draggingPoint) {
+        // Move the point being dragged
+        draggingPoint.position = snapToGrid(event.point + [10,10]);
+        strings[spl_index].segments[pt_index].point = draggingPoint.position;
+        
+    }
 }
+// drawing function
+view.onClick = function(event) {
+    var hitResult = project.hitTest(event.point); // ensure pen does not activate ontop of another object
+    if (drawingActive && !activePath && !hitResult) {
+        // Create a new path and add the initial point, snapped to the grid
+        activePath = new Path({
+            strokeColor: black_color,
+            strokeWidth: 2
+        });
+        activePath.add(snapToGrid(event.point+[10,10]));
+    } else if (drawingActive && activePath) { // If drawing is active, add the final point, snapped to the grid, and stop drawing
+        activePath.add(snapToGrid(event.point+[10,10]));
+        // simplifying the string by replacing with an N point spline
+        var splinePath = new Path({
+            strokeColor: black_color,
+            strokeWidth: 2
+        });
+        var k = 0.01; // node density
+        var N = Math.floor(k * activePath.length); // Number of nodes on final spline
+        var spl_points = []; // to temporarily save spline nodes
+        for (var i = 0; i <= N; i++) {
+            var offset = (i / N) * activePath.length; // offset along the path
+            var point = activePath.getPointAt(offset); // point at offset
+            var snapd_point = snapToGrid(point) // snap spline points to grid
+            splinePath.add(snapd_point);
+            // Create a circle at each node / point
+            var pointCircle = new Path.Circle({
+                center: snapd_point,
+                radius: 3,
+                fillColor: 'white',
+                strokeColor: black_color,
+                strokeWidth: 3
+            });
+            pointCircle.sendToBack();
+            spl_points.push(pointCircle); // Store
+        }
+        activePath.remove(); activePath = null;
+        splinePath.sendToBack(); splinePath.smooth(); // strings below spiders
+        splines_points.push(spl_points);
+        strings.push(splinePath);
+        drawingActive = false;
+        document.getElementById('myCanvas').style.cursor = 'default';
+    }
+}
+    
 
 function onMouseUp(event) {
     // Stop dragging when the mouse button is released
@@ -190,8 +296,12 @@ function onMouseUp(event) {
         active_spi.dragging = false;
         active_spi = null;
     }
+    if (draggingPoint) {
+        draggingPoint = null; // stop dragging string
+    }
 }
 
+var detect = false; // switch for turning on and off spline node proximity detection
 function onMouseMove(event) {
     // Check if the mouse is over the green initial circle
     if (Z_spi_init.contains(event.point)) {
@@ -224,6 +334,42 @@ function onMouseMove(event) {
             X_spi_init.strokeWidth = 2;
             X_spi_plus.visible = false; // Hide the plus symbol
             X_spi_selected = false;
+        }
+    }
+    // for creating strings
+    if (drawingActive && activePath) {
+        activePath.add(event.point);
+    }
+    
+    // showing the spline points when mouse is ontop of strings
+    for (var i = 0; i < splines_points.length; i++) {
+        for (var j = 0; j < splines_points[i].length; j++) {
+            var distance = event.point.getDistance(splines_points[i][j].position);
+            if (distance <= 6 || strings[i].hitTest(event.point)) {
+                for (var k = 0; k < splines_points[i].length; k++) {
+                     splines_points[i][k].visible = true;
+                }
+                detect = true;
+                break;
+
+            } else {
+                for (var k = 0; k < splines_points[i].length; k++) {
+                     splines_points[i][k].visible = false;
+                }
+            }
+            
+        }
+    }
+    // mouse to hand
+    var hitResult = project.activeLayer.hitTest(event.point);
+    if (hitResult) {
+        // If the mouse is over an object, change the cursor to a hand (pointer)
+        document.getElementById('myCanvas').style.cursor = 'pointer';
+    } else {
+        if (drawingActive) {
+            document.getElementById('myCanvas').style.cursor = 'crosshair';
+        } else {
+            document.getElementById('myCanvas').style.cursor = 'default';
         }
     }
 }
