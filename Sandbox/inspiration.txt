@@ -9,3 +9,7 @@ Encode the graph information in an adjacency matrix, or otherwise from graph the
 Can add shortcuts such as spacebar to switch between spider flavours and right click or shift click to turn into wire drawing
 
 Need to add phases to the spiders (by double click?)
+
+make the click region larger for the small black border nodes
+
+add a hover cursor effect instead of + crosshari when over a movable spider/node
