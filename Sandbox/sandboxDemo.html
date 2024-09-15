@@ -158,7 +158,11 @@ function createBlackSpiderAt(point){
             var snappedPoint=snapToGrid(event.point);
             settings.wirePoints.push(snappedPoint);
             if(settings.wirePoints.length===2){
+                if (settings.clickFlavor===colors.gridDot){
                 var wire=new Path.Line({from:settings.wirePoints[0],to:settings.wirePoints[1],strokeColor:settings.clickFlavor,strokeWidth:2});
+                }else{
+                var wire=new Path.Line({from:settings.wirePoints[0],to:settings.wirePoints[1],strokeColor:settings.clickFlavor,strokeWidth:2,dashArray:[4,4]});
+                }
                 settings.wires.push({path:wire,ends:[getSpiderAt(settings.wirePoints[0]),getSpiderAt(settings.wirePoints[1])]});
                 settings.wirePoints=[];
                 if(settings.activeWire){
