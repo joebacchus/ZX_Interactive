@@ -10,13 +10,14 @@
 <body>
     <canvas id="myCanvas" resize></canvas>
     <script type="text/paperscript" canvas="myCanvas">
-        var colors={red:"#ff3657",green:"#8dff36",black:"#242424",blackHover:"#575757",whiteHover:"#f2f2f2",whiteAlt:"#f9f9f9",gridDot:"#000000"};
+        var colors={red:"#ff3657",green:"#8dff36",black:"#242424",yellow:"#fce323",blackHover:"#575757",whiteHover:"#f2f2f2",whiteAlt:"#f9f9f9",gridDot:"#000000"};
         var settings={clickFlavor:colors.whiteHover,gridSize:20,gridWidth:500,gridHeight:500,dragging:false,activeSpider:null,spiders:[],gridDots:[],highlightedDot:null,dotSizes:{original:1,enlarged:6},centerX:view.size.width/2,centerY:view.size.height/2,wireMode:false,wirePoints:[],activeWire:null,wires:[]};
 
-        var ToolBar=new Path.Rectangle({point:[settings.centerX-306,settings.centerY-46],size:[32,112],strokeColor:colors.black,strokeWidth:1,fillColor:colors.whiteAlt,radius: 16});
+        var ToolBar=new Path.Rectangle({point:[settings.centerX-306,settings.centerY-46],size:[32,120],strokeColor:colors.black,strokeWidth:1,fillColor:colors.whiteAlt,radius: 16});
         var ZSpider=new Path.Circle({center:[settings.centerX-290,settings.centerY-30],radius:8,strokeColor:colors.black,strokeWidth:2,fillColor:colors.green});
-        var XSpider=new Path.Circle({center:[settings.centerX-290,settings.centerY+10],radius:8,strokeColor:colors.black,strokeWidth:2,fillColor:colors.red});
-        var WireInit=new Path.Circle({center:[settings.centerX-290,settings.centerY+50],radius:8,strokeColor:colors.black,strokeWidth:2,fillColor:colors.whiteHover});
+        var XSpider=new Path.Circle({center:[settings.centerX-290,settings.centerY+0],radius:8,strokeColor:colors.black,strokeWidth:2,fillColor:colors.red});
+        var HSpider=new Path.Rectangle({point:[settings.centerX-298,settings.centerY+22],size:[16,16],strokeColor:colors.black,strokeWidth:2,radius:2,fillColor:colors.yellow});
+        var WireInit=new Path.Circle({center:[settings.centerX-290,settings.centerY+58],radius:8,strokeColor:colors.black,strokeWidth:2,fillColor:colors.whiteHover});
         var inregion = true;
         createGrid();
 
@@ -66,6 +67,12 @@
         settings.wireMode = false;
         return;
     }
+    if (HSpider.contains(event.point)) {
+        settings.clickFlavor = colors.yellow;
+        highlightSelection();
+        settings.wireMode = false;
+        return;
+    }
     if (WireInit.contains(event.point)) {
         settings.clickFlavor = colors.gridDot;
         settings.wireMode = true;
@@ -99,6 +106,7 @@
     }
     var newSpiderPosition = snapToGrid(event.point);
     if (!getSpiderAt(newSpiderPosition)&&settings.clickFlavor!==colors.whiteHover) {
+        if (settings.clickFlavor!==colors.yellow){
         var newSpider = new Path.Circle({
             center: newSpiderPosition,
             radius: 8,
@@ -106,6 +114,17 @@
             strokeWidth: 2,
             fillColor: settings.clickFlavor
         });
+    }
+    else{
+        var newSpider = new Path.Rectangle({
+            point: newSpiderPosition-[8,8],
+            size:[16,16],
+            strokeColor: colors.black,
+            strokeWidth: 2,
+            radius: 2,
+            fillColor: settings.clickFlavor
+        });
+    }
         settings.spiders.push(newSpider);
         newSpider.bringToFront(); // Ensure the new spider is brought to the front
     }
@@ -219,34 +238,33 @@ function createBlackSpiderAt(point){
         }
 
         function highlightSelection(){
-            if(settings.clickFlavor===colors.whiteHover){
-                ZSpider.strokeColor=colors.black;
-                ZSpider.strokeWidth=2;
-                XSpider.strokeColor=colors.black;
-                XSpider.strokeWidth=2;
-                WireInit.strokeColor=colors.black;
-                WireInit.strokeWidth=2;
-            }else if(settings.clickFlavor===colors.green){
+            if(settings.clickFlavor===colors.green){
                 ZSpider.strokeColor=colors.blackHover;
                 ZSpider.strokeWidth=3;
-                XSpider.strokeColor=colors.black;
-                XSpider.strokeWidth=2;
-                WireInit.strokeColor=colors.black;
-                WireInit.strokeWidth=2;
-            }else if(settings.clickFlavor===colors.red){
+            }else{
                 ZSpider.strokeColor=colors.black;
                 ZSpider.strokeWidth=2;
+            }
+            if(settings.clickFlavor===colors.red){
                 XSpider.strokeColor=colors.blackHover;
                 XSpider.strokeWidth=3;
-                WireInit.strokeColor=colors.black;
-                WireInit.strokeWidth=2;
-            }else if(settings.wireMode){
-                ZSpider.strokeColor=colors.black;
-                ZSpider.strokeWidth=2;
+            }else{
                 XSpider.strokeColor=colors.black;
                 XSpider.strokeWidth=2;
+            }
+            if(settings.clickFlavor===colors.yellow){
+                HSpider.strokeColor=colors.blackHover;
+                HSpider.strokeWidth=3;
+            }else{
+                HSpider.strokeColor=colors.black;
+                HSpider.strokeWidth=2;
+            }
+            if(settings.clickFlavor===colors.whiteHover){
                 WireInit.strokeColor=colors.blackHover;
                 WireInit.strokeWidth=3;
+            }else{
+                WireInit.strokeColor=colors.black;
+                WireInit.strokeWidth=2;
             }
         }
 
