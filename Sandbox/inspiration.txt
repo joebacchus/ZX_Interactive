@@ -17,3 +17,5 @@ add a hover cursor effect instead of + crosshari when over a movable spider/node
 Need to add PHASES: double click to add or?
 
 Add a selection box to move around how regions of things
+
+make the paperscript file external so can import into any html
