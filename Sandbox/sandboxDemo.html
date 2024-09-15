@@ -10,14 +10,18 @@
 <body>
     <canvas id="myCanvas" resize></canvas>
     <script type="text/paperscript" canvas="myCanvas">
-        var colors={red:"#ff3657",green:"#8dff36",black:"#242424",yellow:"#fce323",blackHover:"#575757",whiteHover:"#f2f2f2",whiteAlt:"#f9f9f9",gridDot:"#000000"};
-        var settings={clickFlavor:colors.whiteHover,gridSize:20,gridWidth:500,gridHeight:500,dragging:false,activeSpider:null,spiders:[],gridDots:[],highlightedDot:null,dotSizes:{original:1,enlarged:6},centerX:view.size.width/2,centerY:view.size.height/2,wireMode:false,wirePoints:[],activeWire:null,wires:[]};
+        var colors={red:"#ff3657",green:"#8dff36",yellow:"#fce323",blue:"#2a46fa", 
+                    redH:"#cc2b45",greenH:"#70cc2b",yellowH:"#ccb81d",
+                    black:"#242424",
+        blackHover:"#575757",whiteHover:"#f2f2f2",whiteAlt:"#f9f9f9",gridDot:"#000000"};
+        var settings={clickFlavor:colors.whiteHover,pathFlavor:[0,0],gridSize:20,gridWidth:500,gridHeight:500,dragging:false,activeSpider:null,spiders:[],gridDots:[],highlightedDot:null,dotSizes:{original:1,enlarged:6},centerX:view.size.width/2,centerY:view.size.height/2,wireMode:false,wirePoints:[],activeWire:null,wires:[]};
 
-        var ToolBar=new Path.Rectangle({point:[settings.centerX-306,settings.centerY-46],size:[32,120],strokeColor:colors.black,strokeWidth:1,fillColor:colors.whiteAlt,radius: 16});
+        var ToolBar=new Path.Rectangle({point:[settings.centerX-306,settings.centerY-46],size:[32,150],strokeColor:colors.black,strokeWidth:1,fillColor:colors.whiteAlt,radius: 16});
         var ZSpider=new Path.Circle({center:[settings.centerX-290,settings.centerY-30],radius:8,strokeColor:colors.black,strokeWidth:2,fillColor:colors.green});
         var XSpider=new Path.Circle({center:[settings.centerX-290,settings.centerY+0],radius:8,strokeColor:colors.black,strokeWidth:2,fillColor:colors.red});
         var HSpider=new Path.Rectangle({point:[settings.centerX-298,settings.centerY+22],size:[16,16],strokeColor:colors.black,strokeWidth:2,radius:2,fillColor:colors.yellow});
-        var WireInit=new Path.Circle({center:[settings.centerX-290,settings.centerY+58],radius:8,strokeColor:colors.black,strokeWidth:2,fillColor:colors.whiteHover});
+        var WireInit=new Path.Circle({center:[settings.centerX-290,settings.centerY+58],radius:8,strokeColor:colors.black,strokeWidth:2,fillColor:colors.whiteAlt});
+        var HWireInit=new Path.Circle({center:[settings.centerX-290,settings.centerY+88],radius:8,strokeColor:colors.blue,strokeWidth:2,dashArray:[4,4],fillColor:colors.whiteAlt});
         var inregion = true;
         createGrid();
 
@@ -75,6 +79,12 @@
     }
     if (WireInit.contains(event.point)) {
         settings.clickFlavor = colors.gridDot;
+        settings.wireMode = true;
+        highlightSelection();
+        return;
+    }
+    if (HWireInit.contains(event.point)) {
+        settings.clickFlavor = colors.blue;
         settings.wireMode = true;
         highlightSelection();
         return;
@@ -148,7 +158,7 @@ function createBlackSpiderAt(point){
             var snappedPoint=snapToGrid(event.point);
             settings.wirePoints.push(snappedPoint);
             if(settings.wirePoints.length===2){
-                var wire=new Path.Line({from:settings.wirePoints[0],to:settings.wirePoints[1],strokeColor:colors.black,strokeWidth:2});
+                var wire=new Path.Line({from:settings.wirePoints[0],to:settings.wirePoints[1],strokeColor:settings.clickFlavor,strokeWidth:2});
                 settings.wires.push({path:wire,ends:[getSpiderAt(settings.wirePoints[0]),getSpiderAt(settings.wirePoints[1])]});
                 settings.wirePoints=[];
                 if(settings.activeWire){
