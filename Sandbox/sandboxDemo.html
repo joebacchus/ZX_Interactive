@@ -60,30 +60,35 @@
         function onClick(event){
             inregion = isPointInGridBounds(event.point);
     if (ZSpider.contains(event.point)) {
+        document.getElementById('myCanvas').style.cursor = 'crosshair';
         settings.clickFlavor = colors.green;
         highlightSelection();
         settings.wireMode = false;
         return;
     }
     if (XSpider.contains(event.point)) {
+        document.getElementById('myCanvas').style.cursor = 'crosshair';
         settings.clickFlavor = colors.red;
         highlightSelection();
         settings.wireMode = false;
         return;
     }
     if (HSpider.contains(event.point)) {
+        document.getElementById('myCanvas').style.cursor = 'crosshair';
         settings.clickFlavor = colors.yellow;
         highlightSelection();
         settings.wireMode = false;
         return;
     }
     if (WireInit.contains(event.point)) {
+        document.getElementById('myCanvas').style.cursor = 'crosshair';
         settings.clickFlavor = colors.gridDot;
         settings.wireMode = true;
         highlightSelection();
         return;
     }
     if (HWireInit.contains(event.point)) {
+        document.getElementById('myCanvas').style.cursor = 'crosshair';
         settings.clickFlavor = colors.blue;
         settings.wireMode = true;
         highlightSelection();
@@ -91,12 +96,16 @@
     }
     if (inregion) {
     if (settings.wireMode) {
+        document.getElementById('myCanvas').style.cursor = 'crosshair';
         handleWireClick(event);
         var snappedPoint = snapToGrid(event.point);
         if (!getSpiderAt(snappedPoint)) createBlackSpiderAt(snappedPoint);
         return;
-    }
+    } 
     if (settings.dragging && settings.activeSpider) {
+        if (settings.clickFlavor !== colors.whiteHover){
+        document.getElementById('myCanvas').style.cursor = 'crosshair';
+        }
         settings.activeSpider.position = snapToGrid(event.point);
         settings.dragging = false;
         settings.activeSpider.strokeWidth = 2;
@@ -107,6 +116,7 @@
     }
     for (var i = 0; i < settings.spiders.length; i++) {
         if (settings.spiders[i].contains(event.point)) {
+            document.getElementById('myCanvas').style.cursor = 'default';
             settings.activeSpider = settings.spiders[i];
             settings.dragging = true;
             settings.activeSpider.strokeWidth = 3;
@@ -140,6 +150,7 @@
     }
     }else{
         settings.clickFlavor = colors.whiteHover;
+        document.getElementById('myCanvas').style.cursor = 'default';
         settings.wireMode = false;
         highlightSelection();
         return;
