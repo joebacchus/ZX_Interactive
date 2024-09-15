@@ -3,3 +3,7 @@ following website inspo explains method using JavaScript: "https://jurasic.dev/m
 
 Sandbox layout:
 Website uses Paper.js to make a paint style canvas with toolbox on the side: "http://thepaintshop.biz"
+
+Encode the graph information in an adjacency matrix, or otherwise from graph theory. And find a way to convert this into a matrix 
+
+Can add shortcuts such as spacebar to switch between spider flavours and right click or shift click to turn into wire drawing
