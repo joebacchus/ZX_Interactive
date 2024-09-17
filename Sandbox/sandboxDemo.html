@@ -12,26 +12,39 @@
 <body>
     <canvas id="myCanvas" resize></canvas>
     <!-- <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script> -->
+     
     <script type="text/paperscript" canvas="myCanvas">
-        var colors={red: "#ff3657", green: "#8dff36", yellow: "#fce323", blue: "#2a46fa",
+
+        // Red Green Yellow Blue Black Grey White
+
+        /*var colors={red: "#ff3657", green: "#8dff36", yellow: "#fce323", blue: "#2a46fa",
             redH: "#cc2b45", greenH: "#70cc2b", yellowH: "#ccb81d", blueH: "#2238c7",
             black: "#242424", blackHover: "#575757", whiteHover: "#f2f2f2",
-            whiteAlt: "#f9f9f9", gridDot: "#000000"};
-        var settings={clickFlavor:colors.whiteHover,pathFlavor:[0,0],gridSize:20,gridWidth:500,gridHeight:500,dragging:false,activeSpider:null,activeSpiderPhase:null,spiders:[],spider_phases:[],gridDots:[],highlightedDot:null,
+            whiteAlt: "#f9f9f9", whiteAltS: "#D0D0D0", gridDot: "#000000"};
+        */
+        var colors={red: "#F09AA0", green: "#B6E88E", yellow: "#FAF884", blue: "#769ee3",gridDot: "#363636",
+        redH: "#c87278", greenH: "#8fc066", yellowH: "#d2d05c", blueH: "#4e76bb",gridDotH: "#0e0e0e",
+            black: "#242424", blackHover: "#575757", whiteHover: "#f2f2f2",
+            whiteAlt: "#f0f0f0", whiteAltS: "#D0D0D0", gridDot: "#000000"};
+        var settings={clickFlavor:colors.whiteHover,pathFlavor:[0,0],gridSize:30,gridWidth:500,gridHeight:500,dragging:false,activeSpider:null,activeSpiderPhase:null,spiders:[],spider_phases:[],gridDots:[],highlightedDot:null,
             dotSizes:{original:1,enlarged:6},centerX:view.size.width/2,centerY:view.size.height/2,wireMode:false,wirePoints:[],activeWire:null,wires:[]};
+        
+        var Edge=new Path.Rectangle({point:[settings.centerX-310,settings.centerY-310],size:[600,600],strokeColor:colors.whiteAltS,strokeWidth:1,radius:16});
+        Edge.sendToBack();
+        var ToolBar=new Path.Rectangle({point:[settings.centerX-326,settings.centerY-46],size:[32,150],strokeColor:colors.whiteAltS,strokeWidth:1,fillColor:colors.whiteAlt,radius: 16});
+        var ZSpider=new Path.Circle({center:[settings.centerX-310,settings.centerY-30],radius:10,strokeColor:colors.black,strokeWidth:2,fillColor:colors.green});
+        var XSpider=new Path.Circle({center:[settings.centerX-310,settings.centerY+0],radius:10,strokeColor:colors.black,strokeWidth:2,fillColor:colors.red});
+        var HSpider=new Path.Rectangle({point:[settings.centerX-319,settings.centerY+20],size:[18,18],strokeColor:colors.black,strokeWidth:2,radius:2,fillColor:colors.yellow});
 
-        var ToolBar=new Path.Rectangle({point:[settings.centerX-306,settings.centerY-46],size:[32,150],strokeColor:colors.black,strokeWidth:1,fillColor:colors.whiteAlt,radius: 16});
-        var ZSpider=new Path.Circle({center:[settings.centerX-290,settings.centerY-30],radius:8,strokeColor:colors.black,strokeWidth:2,fillColor:colors.green});
-        var XSpider=new Path.Circle({center:[settings.centerX-290,settings.centerY+0],radius:8,strokeColor:colors.black,strokeWidth:2,fillColor:colors.red});
-        var HSpider=new Path.Rectangle({point:[settings.centerX-298,settings.centerY+22],size:[16,16],strokeColor:colors.black,strokeWidth:2,radius:2,fillColor:colors.yellow});
-        var WireInit=new Path.Circle({center:[settings.centerX-290,settings.centerY+58],radius:8,strokeColor:colors.black,strokeWidth:2,fillColor:colors.whiteAlt});
-        var HWireInit=new Path.Circle({center:[settings.centerX-290,settings.centerY+88],radius:8,strokeColor:colors.blue,strokeWidth:2,dashArray:[4,4],fillColor:colors.whiteAlt});
+        var WireInit=new Path.Circle({center:[settings.centerX-310,settings.centerY+58],radius:10,strokeColor:colors.black,strokeWidth:2,fillColor:colors.whiteAlt});
+        var HWireInit=new Path.Circle({center:[settings.centerX-310,settings.centerY+88],radius:10,strokeColor:colors.blue,strokeWidth:2,dashArray:[4,4],fillColor:colors.whiteAlt});
+        var hovercircle=new Path.Circle({center:[0,0],radius:10,strokeColor:colors.black,strokeWidth:2,fillColor:colors.black,opacity:0.5});
         var phasebaractive = false;
-        var PhaseBar = new Path.Circle({center:[0,0],radius:40,strokeColor:colors.black,strokeWidth:1,fillColor:colors.whiteAlt});
+        var PhaseBar = new Path.Circle({center:[0,0],radius:40,strokeColor:colors.whiteAltS,strokeWidth:1,fillColor:colors.whiteAlt});
         PhaseBar.visible = false;
+        hovercircle.visible = false;
         
-        
-        var phase_values = ['0', '1', '2', '3', '4', '5', '6', '7'];
+        var phase_values = ['0', 'π', '-π', '3', '4', '5', '6', '7'];
         var phase_locations = [[10, -25], [-10, -25], [10, 25], [-10, 25], [25, -10], [25, 10], [-25, -10], [-25 , 10]];
 
         // Arrays to hold individual spider elements
@@ -115,8 +128,8 @@ function snapToGridSmooth(point) {
 }
 
 
-
 function phasebar(position) {
+    
     phasebaractive = true;
     PhaseBar.position = position;
     PhaseBar.visible = true;
@@ -124,6 +137,8 @@ function phasebar(position) {
 
     for (var q = 0; q < phase_values.length; q++) {
         select_spiders[q].position = position + phase_locations[q];
+        select_spiders[q].fillColor = settings.activeSpider.fillColor;
+        select_spiders[q].strokeColor = settings.activeSpider.fillColor;
         select_spiders[q].bringToFront();
         select_spiders_texts[q].position = position + phase_locations[q] + [0,0.5];
         select_spiders_texts[q].bringToFront();
@@ -133,6 +148,7 @@ function phasebar(position) {
 }
 
         function onClick(event){
+            
             inregion = isPointInGridBounds(event.point);
     for (var j = 0; j < phase_values.length; j++) {
         if (select_spiders[j].contains(event.point)) {
@@ -206,6 +222,10 @@ function phasebar(position) {
         settings.activeSpiderPhase.position = settings.activeSpider.position; // PHASE
 
         settings.dragging = false;
+        var hovercircle = settings.activeSpider.hovercircle;
+                if (hovercircle) {
+                    hovercircle.visible = false;
+                }
         settings.activeSpider.strokeWidth = 2;
         settings.activeSpider.strokeColor = colors.black;
         
@@ -229,6 +249,7 @@ function phasebar(position) {
             settings.dragging = true;
             settings.activeSpider.strokeWidth = 3;
             settings.activeSpider.strokeColor = settings.activeSpider.fillColor;
+            
             //document.getElementById('myCanvas').style.cursor = 'move';
             lastClickTime = Date.now();
         
@@ -249,7 +270,7 @@ function phasebar(position) {
         if (settings.clickFlavor!==colors.yellow){
         var newSpider = new Path.Circle({
             center: newSpiderPosition,
-            radius: 8,
+            radius: 10,
             strokeColor: colors.black,
             strokeWidth: 2,
             fillColor: settings.clickFlavor
@@ -273,7 +294,7 @@ function phasebar(position) {
     else{
         var newSpider = new Path.Rectangle({
             point: newSpiderPosition-[8,8],
-            size:[16,16],
+            size:[18,18],
             strokeColor: colors.black,
             strokeWidth: 2,
             radius: 2,
@@ -283,6 +304,7 @@ function phasebar(position) {
     settings.spiders.push(newSpider);
     settings.spider_phases.push(0);
     }
+    setCursorEvents(newSpider);
     }
     }else{
         settings.clickFlavor = colors.whiteHover;
@@ -291,12 +313,12 @@ function phasebar(position) {
         highlightSelection();
         return;
     }
-
 }
 
 function createBlackSpiderAt(point){
     var blackSpider=new Path.Circle({center:point,radius:3,strokeColor:colors.black,strokeWidth:2,fillColor:colors.black});
     settings.spiders.push(blackSpider);
+    setCursorEvents(blackSpider);
     settings.spider_phases.push(0);
     blackSpider.bringToFront(); // Ensure the new spider is brought to the front
 }
@@ -376,6 +398,10 @@ function createBlackSpiderAt(point){
         function onMouseMove(event){
             
             if(settings.dragging&&settings.activeSpider){
+                var hovercircle = settings.activeSpider.hovercircle;
+                if (hovercircle) {
+                    hovercircle.position = settings.activeSpider.position;
+                }
                 highlightNearestDot(event.point);
                 settings.activeSpider.position=snapToGridSmooth(event.point);
                 settings.activeSpiderPhase.position = settings.activeSpider.position;
@@ -397,36 +423,36 @@ function createBlackSpiderAt(point){
 
         function highlightSelection(){
             if(settings.clickFlavor===colors.green){
-                ZSpider.strokeColor=colors.greenH;
-                ZSpider.strokeWidth=3;
+                ZSpider.fillColor=colors.greenH;
+                ZSpider.strokeWidth=2;
             }else{
-                ZSpider.strokeColor=colors.black;
+                ZSpider.fillColor=colors.green;
                 ZSpider.strokeWidth=2;
             }
             if(settings.clickFlavor===colors.red){
-                XSpider.strokeColor=colors.redH;
-                XSpider.strokeWidth=3;
+                XSpider.fillColor=colors.redH;
+                XSpider.strokeWidth=2;
             }else{
-                XSpider.strokeColor=colors.black;
+                XSpider.fillColor=colors.red;
                 XSpider.strokeWidth=2;
             }
             if(settings.clickFlavor===colors.yellow){
-                HSpider.strokeColor=colors.yellowH;
-                HSpider.strokeWidth=3;
+                HSpider.fillColor=colors.yellowH;
+                HSpider.strokeWidth=2;
             }else{
-                HSpider.strokeColor=colors.black;
+                HSpider.fillColor=colors.yellow;
                 HSpider.strokeWidth=2;
             }
             if(settings.clickFlavor===colors.gridDot){
-                WireInit.strokeColor=colors.blackHover;
-                WireInit.strokeWidth=3;
+                WireInit.strokeColor=colors.gridDotH;
+                WireInit.strokeWidth=2;
             }else{
-                WireInit.strokeColor=colors.black;
+                WireInit.strokeColor=colors.gridDot;
                 WireInit.strokeWidth=2;
             }
             if(settings.clickFlavor===colors.blue){
                 HWireInit.strokeColor=colors.blueH;
-                HWireInit.strokeWidth=3;
+                HWireInit.strokeWidth=2;
             }else{
                 HWireInit.strokeColor=colors.blue;
                 HWireInit.strokeWidth=2;
@@ -458,10 +484,52 @@ function createBlackSpiderAt(point){
         settings.highlightedDot = null;
     }
 }
+
+function setCursorEvents(element) {
+    // Create a single hovercircle and manage its state
+    if (!element.hovercircle) {
+        var hovercircle = element.clone();
+        hovercircle.visible = false; // Initially hidden
+        hovercircle.strokeWidth = 8;
+        hovercircle.strokeColor = '#bababa';
+        hovercircle.sendToBack();
+        element.hovercircle = hovercircle; // Store reference on element
+    }
+
+    // Mouse enter event
+    element.onMouseEnter = function(event) {
+        var hovercircle = element.hovercircle;
+        hovercircle.position = element.position;
+        hovercircle.fillColor = '#bababa'; // Set to your desired color
+        hovercircle.opacity = 1;
+        hovercircle.visible = true;
+        hovercircle.sendToBack();
+        ToolBar.sendToBack();
+        Edge.sendToBack();
+    };
+
+    // Mouse leave event
+    element.onMouseLeave = function(event) {
+        var hovercircle = element.hovercircle;
+        hovercircle.visible = false;
+    };
+}
+
+
+// Set up events for each spider
+setCursorEvents(ZSpider);
+setCursorEvents(XSpider);
+setCursorEvents(HSpider);
+setCursorEvents(WireInit);
+setCursorEvents(HWireInit);
+
+
+
+
         view.on('mousedown',onClick);
 
-
         view.on('mousemove',onMouseMove);
+
         view.on('resize',onResize);
         highlightSelection();
     </script>

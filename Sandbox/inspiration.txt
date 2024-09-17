@@ -22,3 +22,5 @@ make the paperscript file external so can import into any html
 
 wheel animate as bursting form middle and then closing in quickly
 
+change the grid so that its a seperate icon that floats above them
+
