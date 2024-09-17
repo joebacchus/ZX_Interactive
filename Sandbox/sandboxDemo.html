@@ -13,8 +13,8 @@
         var colors={red: "#ff3657", green: "#8dff36", yellow: "#fce323", blue: "#2a46fa",
             redH: "#cc2b45", greenH: "#70cc2b", yellowH: "#ccb81d", blueH: "#2238c7",
             black: "#242424", blackHover: "#575757", whiteHover: "#f2f2f2",
-            whiteAlt: "#f9f9f9", gridDot: "#000000", delete_:new Color(0.5)};
-        var settings={clickFlavor:colors.whiteHover,pathFlavor:[0,0],gridSize:20,gridWidth:500,gridHeight:500,dragging:false,activeSpider:null,spiders:[],gridDots:[],highlightedDot:null,dotSizes:{original:1,enlarged:6},centerX:view.size.width/2,centerY:view.size.height/2,wireMode:false,wirePoints:[],activeWire:null,wires:[],deleteMode:false};
+            whiteAlt: "#f9f9f9", gridDot: "#000000", delete_:'#cccccc'};
+        var settings={clickFlavor:colors.whiteHover,pathFlavor:[0,0],gridSize:20,gridWidth:500,gridHeight:500,dragging:false,activeSpider:null,spiders:[],gridDots:[],highlightedDot:null,dotSizes:{original:1,enlarged:6},centerX:view.size.width/2,centerY:view.size.height/2,wireMode:false,wirePoints:[],activeWire:null,wires:[],deleteMode:false,currentGlow:null,highlightDistance:10,glowRadius:5};
 
         var ToolBar=new Path.Rectangle({point:[settings.centerX-306,settings.centerY-46],size:[32,180],strokeColor:colors.black,strokeWidth:1,fillColor:colors.whiteAlt,radius: 16});
         var ZSpider=new Path.Circle({center:[settings.centerX-290,settings.centerY-30],radius:8,strokeColor:colors.black,strokeWidth:2,fillColor:colors.green});
@@ -22,7 +22,28 @@
         var HSpider=new Path.Rectangle({point:[settings.centerX-298,settings.centerY+22],size:[16,16],strokeColor:colors.black,strokeWidth:2,radius:2,fillColor:colors.yellow});
         var WireInit=new Path.Circle({center:[settings.centerX-290,settings.centerY+58],radius:8,strokeColor:colors.black,strokeWidth:2,fillColor:colors.whiteAlt});
         var HWireInit=new Path.Circle({center:[settings.centerX-290,settings.centerY+88],radius:8,strokeColor:colors.blue,strokeWidth:2,dashArray:[4,4],fillColor:colors.whiteAlt})
-        var Bin=new Path.Rectangle({point:[settings.centerX-298,settings.centerY+108],size:[16,16],strokeColor:colors.black,strokeWidth:2,radius:2,fillColor:colors.delete_});
+        //var Bin=new Path.Rectangle({point:[settings.centerX-298,settings.centerY+108],size:[16,16],strokeColor:colors.black,strokeWidth:2,radius:2,fillColor:colors.delete_});
+        var bincentre = [settings.centerX-290, settings.centerY+108];
+        var topWidth = 16; var bottomWidth = 10; var binHeight = 16;
+        var Bin = new Path({
+            segments:[
+                [bincentre[0] + topWidth / 2, bincentre[1]],                 // Top rights
+                [bincentre[0] + bottomWidth / 2, bincentre[1] + binHeight],  // Bottom right
+                [bincentre[0] - bottomWidth / 2, bincentre[1] + binHeight],
+                [bincentre[0] - topWidth / 2, bincentre[1]]   ,              // Top left
+            ],
+            closed: false,
+            strokeColor: 'black',
+            fillColor: colors.delete_,
+            strokeWidth: 2
+        });
+        var Binlid = new Path({
+            segments:[
+                [bincentre[0] - topWidth/2, bincentre[1]],
+                [bincentre[0] + topWidth/2, bincentre[1]],],
+            strokeColor: 'black',
+            strokeWidth: 2
+        });
         
         var inregion = true;
         createGrid();
@@ -37,8 +58,8 @@
         }
 
                 function onResize(event){
-            settings.centerX=view.size.width/2;
-            settings.centerY=view.size.height/2;
+            //settings.centerX=view.size.width/2;
+            //settings.centerY=view.size.height/2;
             //createGrid();
             updateWires();
         }
@@ -160,6 +181,9 @@
             }
         }
     else if (settings.deleteMode) { // deleting
+        if (settings.currentGlow) { // for clow effect, delete glow when click
+            settings.currentGlow.remove(); settings.currentGlow = null; // Remove the previous glow from the canvas
+        }
         var hitResult = project.hitTest(event.point);
         if (hitResult) {
             var clickedItem = hitResult.item;
@@ -314,8 +338,33 @@ function createBlackSpiderAt(point){
                 settings.activeSpider.position=snapToGrid(event.point);
                 updateWires();
             }
+            
             if (settings.deleteMode) {
+                var hitResult = project.activeLayer.hitTest(event.point);
+                if (hitResult) {
+                    // If the mouse is over an object, change the cursor to a hand (pointer)
+                    document.getElementById('myCanvas').style.cursor = 'pointer';
+                } else {
+                    document.getElementById('myCanvas').style.cursor = 'default';
+                }
                 
+                
+                if (settings.currentGlow) {
+                    settings.currentGlow.remove(); settings.currentGlow = null; // Remove the previous glow from the canvas
+                }
+                for (var i = 0; i < settings.spiders.length; i++) { // spider proximity
+                    var distance = settings.spiders[i].position.getDistance(event.point);
+                    if (distance < settings.highlightDistance) {
+                        createGlow(settings.spiders[i]);
+                        return;
+                    }
+                }
+                for (var i = 0; i < settings.wires.length; i++) { // wire proximity
+                    var distance = settings.wires[i].path.getNearestPoint(event.point).getDistance(event.point);
+                    if (distance < settings.highlightDistance) {
+                        createGlow(settings.wires[i].path);
+                    }
+                }
             }else{
                 highlightNearestDot(event.point);
                 if(settings.wireMode&&settings.wirePoints.length===1){ // temporary smaller wire whilst drawing
@@ -329,6 +378,22 @@ function createBlackSpiderAt(point){
                     });
                 }
             }
+        }
+        // Function create a glowing effect around an object
+        function createGlow(item) {
+            var glowPath = item.clone(); // Clone the object to create the glow effect
+            glowPath.guide = true; // Make the clone non-interactive
+
+            // Create an outer glow by scaling the cloned object and applying effects
+            glowPath.scale(1.0); // Make the glow slightly larger than the object
+            glowPath.strokeColor = new Color(1, 0, 0, 0.5); // Red with 50% opacity
+            glowPath.strokeWidth = settings.glowRadius; // Make the stroke thick to simulate glow
+            glowPath.blendMode = 'screen'; // Use screen blend mode for glowing effect
+            glowPath.shadowColor = new Color(1, 0, 0, 0.9); // Set shadow color to red
+            glowPath.shadowBlur = settings.glowRadius; // Add a blur effect for a glow
+            glowPath.shadowOffset = new Point(0, 0); // Center the glow
+
+            settings.currentGlow = glowPath;
         }
 
         function highlightSelection(){
@@ -366,6 +431,13 @@ function createBlackSpiderAt(point){
             }else{
                 HWireInit.strokeColor=colors.blue;
                 HWireInit.strokeWidth=2;
+            }
+            if (settings.clickFlavor===colors.delete_) {
+                var newTopRight = [bincentre[0] + topWidth / 2 -3, bincentre[1] - 7]; // Lift by 20 pixels
+                Binlid.segments[1].point = newTopRight;
+            }else {
+                var newTopRight = [bincentre[0] + topWidth / 2, bincentre[1] ]; // Lift by 20 pixels
+                Binlid.segments[1].point = newTopRight;
             }
         }
 
