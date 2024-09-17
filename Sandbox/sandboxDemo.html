@@ -1,403 +1,402 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Starting</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wire Drawing</title>
     <link rel="stylesheet" href="sandboxDemo.css">
-<!-- Load the Paper.js library -->
-<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/paper.js/0.12.15/paper-full.min.js"></script>
-<!-- Define inlined PaperScript associate it with myCanvas -->
-<script type="text/paperscript" canvas="myCanvas">
-// Colors
-var red_color = "#ff3657";
-var green_color = "#8dff36";
-var black_color = "#242424";
-var black_color_h = "#575757";
-var grid_dot_color = "#000000"; // Color for grid dots
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/paper.js/0.12.15/paper-full.min.js"></script>
+</head>
+<body>
+    <canvas id="myCanvas" resize></canvas>
+    <script type="text/paperscript" canvas="myCanvas">
+        var colors={red: "#ff3657", green: "#8dff36", yellow: "#fce323", blue: "#2a46fa",
+            redH: "#cc2b45", greenH: "#70cc2b", yellowH: "#ccb81d", blueH: "#2238c7",
+            black: "#242424", blackHover: "#575757", whiteHover: "#f2f2f2",
+            whiteAlt: "#f9f9f9", gridDot: "#000000", delete_:new Color(0.5)};
+        var settings={clickFlavor:colors.whiteHover,pathFlavor:[0,0],gridSize:20,gridWidth:500,gridHeight:500,dragging:false,activeSpider:null,spiders:[],gridDots:[],highlightedDot:null,dotSizes:{original:1,enlarged:6},centerX:view.size.width/2,centerY:view.size.height/2,wireMode:false,wirePoints:[],activeWire:null,wires:[],deleteMode:false};
 
-// Grid size
-var gridSize = 20; // Change this value to adjust the grid cell size
-var gridDotRadius = 1; // Radius of the grid dots
+        var ToolBar=new Path.Rectangle({point:[settings.centerX-306,settings.centerY-46],size:[32,180],strokeColor:colors.black,strokeWidth:1,fillColor:colors.whiteAlt,radius: 16});
+        var ZSpider=new Path.Circle({center:[settings.centerX-290,settings.centerY-30],radius:8,strokeColor:colors.black,strokeWidth:2,fillColor:colors.green});
+        var XSpider=new Path.Circle({center:[settings.centerX-290,settings.centerY+0],radius:8,strokeColor:colors.black,strokeWidth:2,fillColor:colors.red});
+        var HSpider=new Path.Rectangle({point:[settings.centerX-298,settings.centerY+22],size:[16,16],strokeColor:colors.black,strokeWidth:2,radius:2,fillColor:colors.yellow});
+        var WireInit=new Path.Circle({center:[settings.centerX-290,settings.centerY+58],radius:8,strokeColor:colors.black,strokeWidth:2,fillColor:colors.whiteAlt});
+        var HWireInit=new Path.Circle({center:[settings.centerX-290,settings.centerY+88],radius:8,strokeColor:colors.blue,strokeWidth:2,dashArray:[4,4],fillColor:colors.whiteAlt})
+        var Bin=new Path.Rectangle({point:[settings.centerX-298,settings.centerY+108],size:[16,16],strokeColor:colors.black,strokeWidth:2,radius:2,fillColor:colors.delete_});
+        
+        var inregion = true;
+        createGrid();
 
-// Grid dimensions (fixed size)
-var gridWidth = 500; // Width of the grid
-var gridHeight = 500; // Height of the grid
+        function createGrid(){
+            settings.gridDots=[];
+            for(var x=settings.centerX-settings.gridWidth/2;x<settings.centerX+settings.gridWidth/2;x+=settings.gridSize)
+                for(var y=settings.centerY-settings.gridHeight/2;y<settings.centerY+settings.gridHeight/2;y+=settings.gridSize){
+                    var dot=new Path.Circle({center:[x+10,y+10],radius:settings.dotSizes.original,fillColor:colors.gridDot});
+                    settings.gridDots.push(dot);
+                }
+        }
 
-// Calculate center position
-var centerX = view.size.width / 2;
-var centerY = view.size.height / 2;
+                function onResize(event){
+            settings.centerX=view.size.width/2;
+            settings.centerY=view.size.height/2;
+            //createGrid();
+            updateWires();
+        }
 
-// Create layers
-var backgroundLayer = new Layer(); // Layer for grid dots
-var foregroundLayer = new Layer(); // Default layer for other elements
-var textLayer = new Layer(); // Layer for the plus symbols
-
-// Initial circles
-var Z_spi_init = new Path.Circle({
-    center: [centerX - 0, centerY - 0], // Adjust initial position as needed
-    radius: 8,
-    strokeColor: black_color,
-    strokeWidth: 2,
-    fillColor: green_color,
-    parent: foregroundLayer // Add to the foreground layer
-});
-
-var X_spi_init = new Path.Circle({
-    center: [centerX - 0, centerY + 0], // Adjust initial position as needed
-    radius: 8,
-    strokeColor: black_color,
-    strokeWidth: 2,
-    fillColor: red_color,
-    parent: foregroundLayer // Add to the foreground layer
-});
-// Cable box
-var string_rect = new Path.Rectangle({
-    point: [centerX - 290, centerY + 50], // Top-left corner
-    size: [25, 25], // Width and height
-    strokeColor: black_color, // Black border
-    strokeWidth: 1, // Border width
-    fillColor: 'white', // Completely transparent fill
-        });
-string_rect.smooth({ type: 'geometric', factor: 0.05 });
-// dynamic string icon
-string_rect.onMouseEnter = function(event) {
-    spline.visible = true;
-};
-string_rect.onMouseLeave = function(event) {
-    spline.visible = false;
-};
+        function isPointInGridBounds(point) {
+    var gridLeft = settings.centerX - settings.gridWidth / 2;
+    var gridRight = settings.centerX + settings.gridWidth / 2;
+    var gridTop = settings.centerY - settings.gridHeight / 2;
+    var gridBottom = settings.centerY + settings.gridHeight / 2;
     
-string_rect.onClick = function(event) {
-    drawingActive = !drawingActive
+    return point.x >= gridLeft && point.x <= gridRight && point.y >= gridTop && point.y <= gridBottom;
 }
 
-// Plus symbols
-var Z_spi_plus = new PointText({
-    point: Z_spi_init.position,
-    content: '+',
-    fillColor: black_color,
-    fontSize: 15,
-    fontFamily: 'Arial',
-    parent: textLayer // Add to the text layer
-});
-Z_spi_plus.visible = false; // Initially hidden
-
-var X_spi_plus = new PointText({
-    point: X_spi_init.position,
-    content: '+',
-    fillColor: black_color,
-    fontSize: 15,
-    fontFamily: 'Arial',
-    parent: textLayer // Add to the text layer
-});
-X_spi_plus.visible = false; // Initially hidden
-
-// Create string icon
-var spline = new Path({
-    strokeColor: 'black',
-    strokeWidth: 1,
-    parent: textLayer
-});
-// 4 points to the path
-spline.add(new Point(string_rect.position.x - 20, string_rect.position.y - 20));
-spline.add(new Point(string_rect.position.x - 10, string_rect.position.y - 17));
-spline.add(new Point(string_rect.position.x - 15, string_rect.position.y - 11));
-spline.add(new Point(string_rect.position.x - 5, string_rect.position.y - 5));
-spline.smooth();
-spline.visible = false;
-spline.fullySelected = false; // Prevent it from being selected
-spline.guide = true; // Make it a non-interactive guide path (optional)
-spline.ignoreEvents = true; // Disable hit testing for this path
-
-var spiders = [];
-var splines_points = [];
-var spi_cen_pos = []; // position from centre for resizing
-var active_spi = null;
-var activePath = null;
-var Z_spi_selected = false;
-var X_spi_selected = false;
-var drawingActive = false;
-var strings = [];
-var draggingPoint = null; // for string points
-
-// Create grid dots
-function createGridDots() {
-    backgroundLayer.removeChildren(); // Clear existing grid dots
-    
-    var startX = centerX - gridWidth / 2;
-    var startY = centerY - gridHeight / 2;
-
-    for (var x = startX; x < startX + gridWidth; x += gridSize) {
-        for (var y = startY; y < startY + gridHeight; y += gridSize) {
-            new Path.Circle({
-                center: [x, y],
-                radius: gridDotRadius,
-                fillColor: grid_dot_color,
-                parent: backgroundLayer // Add to the background layer
-            });
+        function snapToGrid(point){
+            return new Point(
+                Math.round((point.x-settings.centerX)/settings.gridSize)*settings.gridSize+settings.centerX,
+                Math.round((point.y-settings.centerY)/settings.gridSize)*settings.gridSize+settings.centerY
+            );
         }
+
+        function onClick(event){
+            inregion = isPointInGridBounds(event.point);
+    if (ZSpider.contains(event.point)) {
+        document.getElementById('myCanvas').style.cursor = 'crosshair';
+        settings.clickFlavor = colors.green;
+        highlightSelection();
+        settings.wireMode = false; settings.deleteMode = false;
+        return;
     }
-}
-
-function onResize(event) {
-    // Recalculate center position
-    centerX = view.size.width / 2;
-    centerY = view.size.height / 2;
-
-    // Center initial spiders
-    Z_spi_init.position = [centerX - 290, centerY - 30];
-    X_spi_init.position = [centerX - 290, centerY + 10];
-    string_rect.position = [centerX - 290, centerY + 50];
-    spline.position = [centerX - 290, centerY + 50];
-    
-    // Update plus symbols position
-    Z_spi_plus.position = Z_spi_init.position;
-    X_spi_plus.position = X_spi_init.position;
-    
-    // Recreate grid dots
-    createGridDots();
-    
-    // centre placed spiders
-    for (var i = 0; i < spi_cen_pos.length; i++) {
-        spiders[i].position = spi_cen_pos[i] + view.center
+    if (XSpider.contains(event.point)) {
+        document.getElementById('myCanvas').style.cursor = 'crosshair';
+        settings.clickFlavor = colors.red;
+        highlightSelection();
+        settings.wireMode = false; settings.deleteMode = false;
+        return;
+    }
+    if (HSpider.contains(event.point)) {
+        document.getElementById('myCanvas').style.cursor = 'crosshair';
+        settings.clickFlavor = colors.yellow;
+        highlightSelection();
+        settings.wireMode = false; settings.deleteMode = false;
+        return;
+    }
+    if (WireInit.contains(event.point)) {
+        document.getElementById('myCanvas').style.cursor = 'crosshair';
+        settings.clickFlavor = colors.gridDot;
+        settings.wireMode = true; settings.deleteMode = false;
+        highlightSelection();
+        return;
+    }
+    if (HWireInit.contains(event.point)) {
+        document.getElementById('myCanvas').style.cursor = 'crosshair';
+        settings.clickFlavor = colors.blue;
+        settings.wireMode = true; settings.deleteMode = false;
+        highlightSelection();
+        return;
+    }
+    if (Bin.contains(event.point)) {
+        document.getElementById('myCanvas').style.cursor = 'crosshair';
+        settings.clickFlavor = colors.delete_;
+        highlightSelection(); // when bin is clicked does it change?
+        settings.wireMode = false; settings.deleteMode = true;
+        return;
+    }
+    if (inregion) {
+        if (!settings.deleteMode) {
+            if (settings.wireMode) {
+                document.getElementById('myCanvas').style.cursor = 'crosshair';
+                var snappedPoint = snapToGrid(event.point);
+                if (!getSpiderAt(snappedPoint)) createBlackSpiderAt(snappedPoint); // if line is not being drawn ontop of another spider
+                handleWireClick(event);
+                return;
+            }
+            if (settings.dragging && settings.activeSpider) { // stop the spider dragging
+                if (settings.clickFlavor !== colors.whiteHover){
+                document.getElementById('myCanvas').style.cursor = 'crosshair';
+                }
+                settings.activeSpider.position = snapToGrid(event.point);
+                settings.dragging = false;
+                settings.activeSpider.strokeWidth = 2;
+                settings.activeSpider.strokeColor = colors.black;
+                settings.activeSpider = null;
+                updateWires();
+                return;
+            }
+            for (var i = 0; i < settings.spiders.length; i++) { // finding a spider to drag
+                if (settings.spiders[i].contains(event.point)) {
+                    document.getElementById('myCanvas').style.cursor = 'default';
+                    settings.activeSpider = settings.spiders[i];
+                    settings.dragging = true;
+                    settings.activeSpider.strokeWidth = 3;
+                    settings.activeSpider.strokeColor = settings.activeSpider.fillColor;
+                    return;
+                }
+            }
+            var newSpiderPosition = snapToGrid(event.point);
+            if (!getSpiderAt(newSpiderPosition)&&settings.clickFlavor!==colors.whiteHover) {
+                if (settings.clickFlavor!==colors.yellow){
+                var newSpider = new Path.Circle({
+                    center: newSpiderPosition,
+                    radius: 8,
+                    strokeColor: colors.black,
+                    strokeWidth: 2,
+                    fillColor: settings.clickFlavor
+                });
+            }
+            else{ // if hadamard init has been clicked
+                var newSpider = new Path.Rectangle({
+                    point: newSpiderPosition-[8,8],
+                    size:[16,16],
+                    strokeColor: colors.black,
+                    strokeWidth: 2,
+                    radius: 2,
+                    fillColor: settings.clickFlavor
+                });
+            }
+                settings.spiders.push(newSpider);
+                newSpider.bringToFront(); // Ensure the new spider is brought to the front
+            }
         }
-}
-var spl_index = null; pt=index = null;
-function onMouseDown(event) {
-    // Check if any existing circle is clicked
-    for (var i = 0; i < spiders.length; i++) {
-        var circle = spiders[i];
-        if (circle.contains(event.point)) {
-            // Start dragging the clicked circle
-            active_spi = circle;
-            active_spi.dragging = true;
-            active_spi.lastPoint = event.point; // Store the last point
+    else if (settings.deleteMode) { // deleting
+        var hitResult = project.hitTest(event.point);
+        if (hitResult) {
+            var clickedItem = hitResult.item;
+            //spiders
+            var spiderIndex = settings.spiders.findIndex(function(spider) {
+                return spider === clickedItem;
+            });
+            if (spiderIndex > -1) {
+                // search for connections to this spider
+                var legsArray = [];
+                for (var i = 0; i < settings.wires.length; i++) {
+                    for (var j = 0; j < 2; j++) {
+                        if (settings.wires[i].ends[j].position.x===settings.spiders[spiderIndex].position.x && settings.wires[i].ends[j].position.y===settings.spiders[spiderIndex].position.y) {
+                            legsArray.push(settings.wires[i].path);
+                        }
+                    }
+                }
+                for (var i=0; i < legsArray.length; i++) { // removing all legs
+                    delAllofWire(legsArray[i]);
+                }
+                if (legsArray.length===0||settings.spiders[spiderIndex].bounds.width!==6) {
+                    settings.spiders[spiderIndex].remove(); // remove lone clicked spider or coloured joined spider
+                    settings.spiders.splice(spiderIndex, 1);
+                }
+                return;
+            }
+            //wires and any lone black nodes
+            delAllofWire(clickedItem);
             return;
         }
     }
-    // Check if the user clicked on any of the point circles
-    //console.log(splines_points.length);
-    for (var i = 0; i < splines_points.length; i++) {
-        //console.log(spl_points)
-        //console.log("Spline ${i + 1}:");
-        for (var j = 0; j < splines_points[i].length; j++) {
-            //console.log(j);
-            if (splines_points[i][j].hitTest(event.point)) {
-                draggingPoint = splines_points[i][j]; // Set the point that is being dragged-->
-                spl_index = i;
-                pt_index = j;
-                break;
-            }
-        }
-    }
-
-    // If the green initial circle is clicked, create a new circle
-    if (Z_spi_init.contains(event.point)) {
-        active_spi = new Path.Circle({
-            center: snapToGrid(event.point),
-            radius: 8,
-            strokeColor: black_color,
-            strokeWidth: 2,
-            fillColor: green_color,
-        });
-        spiders.push(active_spi); // Add the new circle to the array
-        spi_cen_pos.push(active_spi.position - view.center)
-        active_spi.dragging = true;
-    }
-
-    // If the red initial circle is clicked, create a new circle
-    else if (X_spi_init.contains(event.point)) {
-        active_spi = new Path.Circle({
-            center: snapToGrid(event.point),
-            radius: 8,
-            strokeColor: black_color,
-            strokeWidth: 2,
-            fillColor: red_color,
-        });
-        spiders.push(active_spi); // Add the new circle to the array
-        spi_cen_pos.push(active_spi.position - view.center)
-        active_spi.dragging = true;
-    }
-    else {
-        // If clicking elsewhere and there's an active circle, stop dragging
-        if (active_spi) {
-            active_spi.dragging = false;
-            active_spi = null;
-        }
-    }
-}
-
-function onMouseDrag(event) {
-    // If an active circle is being dragged, move it to the snapped cursor position
-    if (active_spi && active_spi.dragging) {
-        // Snap the cursor position to the grid
-        var snappedPoint = snapToGrid(event.point+[10,10]);
-        active_spi.position = snappedPoint;
-        for (var i = 0; i < spi_cen_pos.length; i++) {
-            spi_cen_pos[i] = spiders[i].position - view.center // update centred
-        
-        }
-    }
-    if (draggingPoint) {
-        // Move the point being dragged
-        draggingPoint.position = snapToGrid(event.point + [10,10]);
-        strings[spl_index].segments[pt_index].point = draggingPoint.position;
-        
-    }
-}
-// drawing function
-view.onClick = function(event) {
-    var hitResult = project.hitTest(event.point); // ensure pen does not activate ontop of another object
-    if (drawingActive && !activePath && !hitResult) {
-        // Create a new path and add the initial point, snapped to the grid
-        activePath = new Path({
-            strokeColor: black_color,
-            strokeWidth: 2
-        });
-        activePath.add(snapToGrid(event.point+[10,10]));
-    } else if (drawingActive && activePath) { // If drawing is active, add the final point, snapped to the grid, and stop drawing
-        activePath.add(snapToGrid(event.point+[10,10]));
-        // simplifying the string by replacing with an N point spline
-        var splinePath = new Path({
-            strokeColor: black_color,
-            strokeWidth: 2
-        });
-        var k = 0.01; // node density
-        var N = Math.floor(k * activePath.length); // Number of nodes on final spline
-        var spl_points = []; // to temporarily save spline nodes
-        for (var i = 0; i <= N; i++) {
-            var offset = (i / N) * activePath.length; // offset along the path
-            var point = activePath.getPointAt(offset); // point at offset
-            var snapd_point = snapToGrid(point) // snap spline points to grid
-            splinePath.add(snapd_point);
-            // Create a circle at each node / point
-            var pointCircle = new Path.Circle({
-                center: snapd_point,
-                radius: 3,
-                fillColor: 'white',
-                strokeColor: black_color,
-                strokeWidth: 3
-            });
-            pointCircle.sendToBack();
-            spl_points.push(pointCircle); // Store
-        }
-        activePath.remove(); activePath = null;
-        splinePath.sendToBack(); splinePath.smooth(); // strings below spiders
-        splines_points.push(spl_points);
-        strings.push(splinePath);
-        drawingActive = false;
+    }else{
+        settings.clickFlavor = colors.whiteHover;
         document.getElementById('myCanvas').style.cursor = 'default';
-    }
-}
-    
-
-function onMouseUp(event) {
-    // Stop dragging when the mouse button is released
-    if (active_spi) {
-        active_spi.dragging = false;
-        active_spi = null;
-    }
-    if (draggingPoint) {
-        draggingPoint = null; // stop dragging string
-    }
-}
-
-var detect = false; // switch for turning on and off spline node proximity detection
-function onMouseMove(event) {
-    // Check if the mouse is over the green initial circle
-    if (Z_spi_init.contains(event.point)) {
-        if (!Z_spi_selected) {
-            Z_spi_init.strokeColor = black_color_h;
-            Z_spi_init.strokeWidth = 3;
-            Z_spi_plus.visible = true; // Show the plus symbol
-            Z_spi_selected = true;
-        }
-    } else {
-        if (Z_spi_selected) {
-            Z_spi_init.strokeColor = black_color;
-            Z_spi_init.strokeWidth = 2;
-            Z_spi_plus.visible = false; // Hide the plus symbol
-            Z_spi_selected = false;
-        }
-    }
-
-    // Check if the mouse is over the red initial circle
-    if (X_spi_init.contains(event.point)) {
-        if (!X_spi_selected) {
-            X_spi_init.strokeColor = black_color_h;
-            X_spi_init.strokeWidth = 3;
-            X_spi_plus.visible = true; // Show the plus symbol
-            X_spi_selected = true;
-        }
-    } else {
-        if (X_spi_selected) {
-            X_spi_init.strokeColor = black_color;
-            X_spi_init.strokeWidth = 2;
-            X_spi_plus.visible = false; // Hide the plus symbol
-            X_spi_selected = false;
-        }
-    }
-    // for creating strings
-    if (drawingActive && activePath) {
-        activePath.add(event.point);
+        settings.wireMode = false; settings.deleteMode = false;
+        highlightSelection();
+        return;
     }
     
-    // showing the spline points when mouse is ontop of strings
-    for (var i = 0; i < splines_points.length; i++) {
-        for (var j = 0; j < splines_points[i].length; j++) {
-            var distance = event.point.getDistance(splines_points[i][j].position);
-            if (distance <= 6 || strings[i].hitTest(event.point)) {
-                for (var k = 0; k < splines_points[i].length; k++) {
-                     splines_points[i][k].visible = true;
-                }
-                detect = true;
-                break;
+}
+        
+function delAllofWire(clickedItem){
+    var wireIndex = settings.wires.findIndex(function(wire) {
+        return wire.path === clickedItem;
+    });
+    if (wireIndex > -1) {
+        var endspi = settings.wires[wireIndex].ends;
+        for (var i = 0; i < 2; i++) {
+            var endspiConnected = 0;
+            var spiderIndex = settings.spiders.findIndex(function(spider) {
+                return spider === endspi[i];
+            });
 
-            } else {
-                for (var k = 0; k < splines_points[i].length; k++) {
-                     splines_points[i][k].visible = false;
+            for (var j = 0; j < settings.wires.length; j++) { // searching to find if end node is connected to any more strings
+                for (var k = 0; k < 2; k++) {
+                    if (endspi[i]===settings.wires[j].ends[k]) {
+                        endspiConnected += 1
+                    }
                 }
             }
-            
+            if (endspi[i].bounds.width===6 && endspiConnected<2) {  // if end of cable has simple node and it is not connected to another cable
+                settings.spiders[spiderIndex].remove();
+                settings.spiders.splice(spiderIndex, 1);
+            }
         }
-    }
-    // mouse to hand
-    var hitResult = project.activeLayer.hitTest(event.point);
-    if (hitResult) {
-        // If the mouse is over an object, change the cursor to a hand (pointer)
-        document.getElementById('myCanvas').style.cursor = 'pointer';
-    } else {
-        if (drawingActive) {
-            document.getElementById('myCanvas').style.cursor = 'crosshair';
-        } else {
-            document.getElementById('myCanvas').style.cursor = 'default';
-        }
+        settings.wires[wireIndex].path.remove();
+        settings.wires.splice(wireIndex, 1);
     }
 }
 
-// Function to snap a point to the nearest grid intersection
-function snapToGrid(point) {
-    return new Point(
-        Math.round((point.x-view.center.x)/ gridSize ) * gridSize + view.center.x - 10,
-        Math.round((point.y-view.center.y)/ gridSize) * gridSize + view.center.y - 10
-    );
+function createBlackSpiderAt(point){
+    var blackSpider=new Path.Circle({center:point,radius:3,strokeColor:colors.black,strokeWidth:2,fillColor:colors.black});
+    settings.spiders.push(blackSpider);
+    blackSpider.bringToFront(); // Ensure the new spider is brought to the front
 }
 
-// Setup event listeners
-view.on('mousedown', onMouseDown);
-view.on('mousemove', onMouseMove);
-view.on('mousedrag', onMouseDrag);
-view.on('mouseup', onMouseUp);
 
-// Initial setup
-createGridDots();
+        function handleWireClick(event){
+            var snappedPoint=snapToGrid(event.point);
+            settings.wirePoints.push(snappedPoint); // settings.wirePoints keeps track of cable curreltly being drawn
+            if(settings.wirePoints.length===2){
+                if (settings.clickFlavor===colors.gridDot){
+                var wire=new Path.Line({from:settings.wirePoints[0],to:settings.wirePoints[1],strokeColor:settings.clickFlavor,strokeWidth:2});
+                }else{
+                var wire=new Path.Line({from:settings.wirePoints[0],to:settings.wirePoints[1],strokeColor:settings.clickFlavor,strokeWidth:2,dashArray:[4,4]});
+                }
+                settings.wires.push({path:wire,ends:[getSpiderAt(settings.wirePoints[0]),getSpiderAt(settings.wirePoints[1])]});
+                settings.wirePoints=[];
+                if(settings.activeWire){
+                    settings.activeWire.remove();
+                    settings.activeWire=null;
+                }
+                wire.sendToBack();
+            }
+        }
 
+        function getSpiderAt(point){
+            for(var i=0;i<settings.spiders.length;i++)
+                if(settings.spiders[i].bounds.contains(point)) return settings.spiders[i];
+            return null;
+        }
 
+        function updateWires(){
+            for(var i=0;i<settings.wires.length;i++){
+                var wire=settings.wires[i];
+                var spiderA=wire.ends[0];
+                var spiderB=wire.ends[1];
+                if(spiderA&&spiderB){
+                    wire.path.segments[0].point=spiderA.position;
+                    wire.path.segments[1].point=spiderB.position;
+                }else{
+                    var startPoint=wire.path.segments[0].point;
+                    var endPoint=wire.path.segments[1].point;
+                    var nearestStart=findNearestSpiderOrBlackDot(startPoint);
+                    var nearestEnd=findNearestSpiderOrBlackDot(endPoint);
+                    if(nearestStart){
+                        wire.path.segments[0].point=nearestStart.position;
+                        wire.ends[0]=nearestStart;
+                    }
+                    if(nearestEnd){
+                        wire.path.segments[1].point=nearestEnd.position;
+                        wire.ends[1]=nearestEnd;
+                    }
+                }
+            }
+        }
 
-</script>
-</head>
-<body>
-    
-    <canvas id="myCanvas" resize></canvas>
-    
+        function findNearestSpiderOrBlackDot(point){
+            var nearest=null,minDist=Infinity;
+            settings.spiders.forEach(function(spider){
+                var dist=point.getDistance(spider.position);
+                if(dist<minDist){
+                    minDist=dist;
+                    nearest=spider;
+                }
+            });
+            settings.spiders.forEach(function(dot){
+                if(dot.fillColor===colors.black){
+                    var dist=point.getDistance(dot.position);
+                    if(dist<minDist){
+                        minDist=dist;
+                        nearest=dot;
+                    }
+                }
+            });
+            return minDist<10?nearest:null;
+        }
+
+        function onMouseMove(event){
+            if(settings.dragging&&settings.activeSpider){
+                highlightNearestDot(event.point);
+                settings.activeSpider.position=snapToGrid(event.point);
+                updateWires();
+            }
+            if (settings.deleteMode) {
+                
+            }else{
+                highlightNearestDot(event.point);
+                if(settings.wireMode&&settings.wirePoints.length===1){ // temporary smaller wire whilst drawing
+                    if(settings.activeWire) settings.activeWire.remove();
+                    settings.activeWire=new Path.Line({
+                        from:settings.wirePoints[0],
+                        to:snapToGrid(event.point),
+                        strokeColor:colors.black,
+                        strokeWidth:1,
+                        dashArray:[2,2]
+                    });
+                }
+            }
+        }
+
+        function highlightSelection(){
+            if(settings.clickFlavor===colors.green){
+                ZSpider.strokeColor=colors.greenH;
+                ZSpider.strokeWidth=3;
+            }else{
+                ZSpider.strokeColor=colors.black;
+                ZSpider.strokeWidth=2;
+            }
+            if(settings.clickFlavor===colors.red){
+                XSpider.strokeColor=colors.redH;
+                XSpider.strokeWidth=3;
+            }else{
+                XSpider.strokeColor=colors.black;
+                XSpider.strokeWidth=2;
+            }
+            if(settings.clickFlavor===colors.yellow){
+                HSpider.strokeColor=colors.yellowH;
+                HSpider.strokeWidth=3;
+            }else{
+                HSpider.strokeColor=colors.black;
+                HSpider.strokeWidth=2;
+            }
+            if(settings.clickFlavor===colors.gridDot){
+                WireInit.strokeColor=colors.blackHover;
+                WireInit.strokeWidth=3;
+            }else{
+                WireInit.strokeColor=colors.black;
+                WireInit.strokeWidth=2;
+            }
+            if(settings.clickFlavor===colors.blue){
+                HWireInit.strokeColor=colors.blueH;
+                HWireInit.strokeWidth=3;
+            }else{
+                HWireInit.strokeColor=colors.blue;
+                HWireInit.strokeWidth=2;
+            }
+        }
+
+        function highlightNearestDot(point){
+    var nearestDot = null, minDist = Infinity;
+    settings.gridDots.forEach(function(dot){
+        var dist = point.getDistance(dot.position);
+        if (dist < minDist && !getSpiderAt(dot.position)) {
+            minDist = dist;
+            nearestDot = dot;
+        }
+    });
+    if (nearestDot && minDist < settings.gridSize / 2) {
+        if (settings.highlightedDot) {
+            settings.highlightedDot.scale(settings.dotSizes.original / settings.dotSizes.enlarged);
+            settings.highlightedDot.fillColor = colors.gridDot;
+        }
+        nearestDot.scale(settings.dotSizes.enlarged / settings.dotSizes.original);
+        nearestDot.fillColor = settings.clickFlavor;
+        settings.highlightedDot = nearestDot;
+
+    } else if (settings.highlightedDot) {
+        settings.highlightedDot.scale(settings.dotSizes.original / settings.dotSizes.enlarged);
+        settings.highlightedDot.fillColor = colors.gridDot;
+        settings.highlightedDot = null;
+    }
+}
+        view.on('mousedown',onClick);
+        view.on('mousemove',onMouseMove);
+        view.on('resize',onResize);
+        highlightSelection();
+    </script>
 </body>
 </html>
