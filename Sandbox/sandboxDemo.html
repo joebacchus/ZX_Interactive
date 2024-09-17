@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,14 +8,17 @@
     <link rel="stylesheet" href="sandboxDemo.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/paper.js/0.12.15/paper-full.min.js"></script>
 </head>
+
 <body>
     <canvas id="myCanvas" resize></canvas>
+    <!-- <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script> -->
     <script type="text/paperscript" canvas="myCanvas">
         var colors={red: "#ff3657", green: "#8dff36", yellow: "#fce323", blue: "#2a46fa",
             redH: "#cc2b45", greenH: "#70cc2b", yellowH: "#ccb81d", blueH: "#2238c7",
             black: "#242424", blackHover: "#575757", whiteHover: "#f2f2f2",
             whiteAlt: "#f9f9f9", gridDot: "#000000"};
-        var settings={clickFlavor:colors.whiteHover,pathFlavor:[0,0],gridSize:20,gridWidth:500,gridHeight:500,dragging:false,activeSpider:null,spiders:[],gridDots:[],highlightedDot:null,dotSizes:{original:1,enlarged:6},centerX:view.size.width/2,centerY:view.size.height/2,wireMode:false,wirePoints:[],activeWire:null,wires:[]};
+        var settings={clickFlavor:colors.whiteHover,pathFlavor:[0,0],gridSize:20,gridWidth:500,gridHeight:500,dragging:false,activeSpider:null,activeSpiderPhase:null,spiders:[],spider_phases:[],gridDots:[],highlightedDot:null,
+            dotSizes:{original:1,enlarged:6},centerX:view.size.width/2,centerY:view.size.height/2,wireMode:false,wirePoints:[],activeWire:null,wires:[]};
 
         var ToolBar=new Path.Rectangle({point:[settings.centerX-306,settings.centerY-46],size:[32,150],strokeColor:colors.black,strokeWidth:1,fillColor:colors.whiteAlt,radius: 16});
         var ZSpider=new Path.Circle({center:[settings.centerX-290,settings.centerY-30],radius:8,strokeColor:colors.black,strokeWidth:2,fillColor:colors.green});
@@ -22,7 +26,46 @@
         var HSpider=new Path.Rectangle({point:[settings.centerX-298,settings.centerY+22],size:[16,16],strokeColor:colors.black,strokeWidth:2,radius:2,fillColor:colors.yellow});
         var WireInit=new Path.Circle({center:[settings.centerX-290,settings.centerY+58],radius:8,strokeColor:colors.black,strokeWidth:2,fillColor:colors.whiteAlt});
         var HWireInit=new Path.Circle({center:[settings.centerX-290,settings.centerY+88],radius:8,strokeColor:colors.blue,strokeWidth:2,dashArray:[4,4],fillColor:colors.whiteAlt});
+        var phasebaractive = false;
+        var PhaseBar = new Path.Circle({center:[0,0],radius:40,strokeColor:colors.black,strokeWidth:1,fillColor:colors.whiteAlt});
+        PhaseBar.visible = false;
+        
+        
+        var phase_values = ['0', '1', '2', '3', '4', '5', '6', '7'];
+        var phase_locations = [[10, -25], [-10, -25], [10, 25], [-10, 25], [25, -10], [25, 10], [-25, -10], [-25 , 10]];
+
+        // Arrays to hold individual spider elements
+        var select_spiders = [];
+        var select_spiders_texts = [];
+    
+    for (var k = 0; k < phase_values.length; k++) {
+            
+            var select_spider = new Path.Circle({
+                center: [0,0],
+                radius: 8,
+                strokeColor: colors.black,
+                strokeWidth: 2,
+                fillColor: colors.whiteAlt
+            });
+
+            var select_spider_text = new PointText({
+                point: [0,0], 
+                content: phase_values[k],
+                fillColor: colors.black,
+                fontFamily: 'Helvetica',
+                fontSize: 12,
+                justification: 'center'
+            });
+
+            select_spider.visible = false;
+            select_spider_text.visible = false;
+
+            select_spiders.push(select_spider);
+            select_spiders_texts.push(select_spider_text);
+        }
+
         var inregion = true;
+        var lastClickTime = 0;
         createGrid();
 
         function createGrid(){
@@ -30,6 +73,7 @@
             for(var x=settings.centerX-settings.gridWidth/2;x<settings.centerX+settings.gridWidth/2;x+=settings.gridSize)
                 for(var y=settings.centerY-settings.gridHeight/2;y<settings.centerY+settings.gridHeight/2;y+=settings.gridSize){
                     var dot=new Path.Circle({center:[x+10,y+10],radius:settings.dotSizes.original,fillColor:colors.gridDot});
+                    dot.sendToBack()
                     settings.gridDots.push(dot);
                 }
         }
@@ -50,15 +94,67 @@
     return point.x >= gridLeft && point.x <= gridRight && point.y >= gridTop && point.y <= gridBottom;
 }
 
-        function snapToGrid(point){
+function snapToGrid(point){
             return new Point(
                 Math.round((point.x-settings.centerX)/settings.gridSize)*settings.gridSize+settings.centerX,
                 Math.round((point.y-settings.centerY)/settings.gridSize)*settings.gridSize+settings.centerY
             );
         }
 
+function snapToGridSmooth(point) {
+    var smoothing = 0.75
+    // Calculate the snapped position
+    var snappedX = Math.round((point.x - settings.centerX) / settings.gridSize) * settings.gridSize + settings.centerX;
+    var snappedY = Math.round((point.y - settings.centerY) / settings.gridSize) * settings.gridSize + settings.centerY;
+
+    // Interpolate between the current position and the snapped position
+    var smoothedX = point.x + (snappedX - point.x) * smoothing;
+    var smoothedY = point.y + (snappedY - point.y) * smoothing;
+
+    return new Point(smoothedX, smoothedY);
+}
+
+
+
+function phasebar(position) {
+    phasebaractive = true;
+    PhaseBar.position = position;
+    PhaseBar.visible = true;
+    PhaseBar.bringToFront();
+
+    for (var q = 0; q < phase_values.length; q++) {
+        select_spiders[q].position = position + phase_locations[q];
+        select_spiders[q].bringToFront();
+        select_spiders_texts[q].position = position + phase_locations[q] + [0,0.5];
+        select_spiders_texts[q].bringToFront();
+        select_spiders[q].visible = true;
+        select_spiders_texts[q].visible = true;
+    }
+}
+
         function onClick(event){
             inregion = isPointInGridBounds(event.point);
+    for (var j = 0; j < phase_values.length; j++) {
+        if (select_spiders[j].contains(event.point)) {
+            settings.activeSpiderPhase.content = select_spiders_texts[j].content;
+            if (settings.activeSpiderPhase.content === '0'){
+                settings.activeSpiderPhase.visible = false;
+            }else{
+                settings.activeSpiderPhase.visible = true;
+            }
+            return;
+        }
+    }
+
+    if (phasebaractive === true && !PhaseBar.contains(event.point)) {
+    phasebaractive = false;
+    for (var s = 0; s < phase_values.length; s++) {
+                select_spiders[s].visible = false;
+                select_spiders_texts[s].visible = false;
+            }
+    PhaseBar.visible = false;
+}
+
     if (ZSpider.contains(event.point)) {
         document.getElementById('myCanvas').style.cursor = 'crosshair';
         settings.clickFlavor = colors.green;
@@ -107,10 +203,21 @@
         document.getElementById('myCanvas').style.cursor = 'crosshair';
         }
         settings.activeSpider.position = snapToGrid(event.point);
+        settings.activeSpiderPhase.position = settings.activeSpider.position; // PHASE
+
         settings.dragging = false;
         settings.activeSpider.strokeWidth = 2;
         settings.activeSpider.strokeColor = colors.black;
-        settings.activeSpider = null;
+        
+        if (Date.now() - lastClickTime < 300) {
+            phasebar(snapToGrid(event.point));
+            settings.activeSpider.bringToFront();
+            settings.activeSpiderPhase.bringToFront();
+        
+}
+
+        //settings.activeSpider = null;
+        
         updateWires();
         return;
     }
@@ -118,9 +225,21 @@
         if (settings.spiders[i].contains(event.point)) {
             document.getElementById('myCanvas').style.cursor = 'default';
             settings.activeSpider = settings.spiders[i];
+            settings.activeSpiderPhase = settings.spider_phases[i];
             settings.dragging = true;
             settings.activeSpider.strokeWidth = 3;
             settings.activeSpider.strokeColor = settings.activeSpider.fillColor;
+            //document.getElementById('myCanvas').style.cursor = 'move';
+            lastClickTime = Date.now();
+        
+            PhaseBar.visible = false;
+            phasebaractive = false;
+            
+            for (var s = 0; s < phase_values.length; s++) {
+                select_spiders[s].visible = false;
+                select_spiders_texts[s].visible = false;
+            }
+        
             return;
             
         }
@@ -135,7 +254,22 @@
             strokeWidth: 2,
             fillColor: settings.clickFlavor
         });
+        
+        var newSpiderText = new PointText({
+                point: newSpiderPosition + [0,3.5], 
+                content: 0,
+                fillColor: colors.black,
+                fontFamily: 'Helvetica',
+                fontSize: 12,
+                justification: 'center'
+            });
+            newSpiderText.visible=false;
+            newSpider.bringToFront();
+            newSpiderText.bringToFront();
+            settings.spiders.push(newSpider);
+            settings.spider_phases.push(newSpiderText);
     }
+
     else{
         var newSpider = new Path.Rectangle({
             point: newSpiderPosition-[8,8],
@@ -145,9 +279,10 @@
             radius: 2,
             fillColor: settings.clickFlavor
         });
+    newSpider.bringToFront(); 
+    settings.spiders.push(newSpider);
+    settings.spider_phases.push(0);
     }
-        settings.spiders.push(newSpider);
-        newSpider.bringToFront(); // Ensure the new spider is brought to the front
     }
     }else{
         settings.clickFlavor = colors.whiteHover;
@@ -156,11 +291,13 @@
         highlightSelection();
         return;
     }
+
 }
 
 function createBlackSpiderAt(point){
     var blackSpider=new Path.Circle({center:point,radius:3,strokeColor:colors.black,strokeWidth:2,fillColor:colors.black});
     settings.spiders.push(blackSpider);
+    settings.spider_phases.push(0);
     blackSpider.bringToFront(); // Ensure the new spider is brought to the front
 }
 
@@ -182,12 +319,6 @@ function createBlackSpiderAt(point){
                 }
                 wire.sendToBack();
             }
-        }
-
-        function createBlackSpiderAt(point){
-            var blackSpider=new Path.Circle({center:point,radius:3,strokeColor:colors.black,strokeWidth:2,fillColor:colors.black});
-            settings.spiders.push(blackSpider);
-            blackSpider.bringToFront();
         }
 
         function getSpiderAt(point){
@@ -243,9 +374,11 @@ function createBlackSpiderAt(point){
         }
 
         function onMouseMove(event){
+            
             if(settings.dragging&&settings.activeSpider){
                 highlightNearestDot(event.point);
-                settings.activeSpider.position=snapToGrid(event.point);
+                settings.activeSpider.position=snapToGridSmooth(event.point);
+                settings.activeSpiderPhase.position = settings.activeSpider.position;
                 updateWires();
             }else{
                 highlightNearestDot(event.point);
@@ -301,6 +434,7 @@ function createBlackSpiderAt(point){
         }
 
         function highlightNearestDot(point){
+            
     var nearestDot = null, minDist = Infinity;
     settings.gridDots.forEach(function(dot){
         var dist = point.getDistance(dot.position);
@@ -325,9 +459,12 @@ function createBlackSpiderAt(point){
     }
 }
         view.on('mousedown',onClick);
+
+
         view.on('mousemove',onMouseMove);
         view.on('resize',onResize);
         highlightSelection();
     </script>
 </body>
+
 </html>

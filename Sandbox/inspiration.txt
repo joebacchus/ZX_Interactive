@@ -19,3 +19,6 @@ Need to add PHASES: double click to add or?
 Add a selection box to move around how regions of things
 
 make the paperscript file external so can import into any html
+
+wheel animate as bursting form middle and then closing in quickly
+
